@@ -59,6 +59,14 @@ namespace IJK {
      const VTYPE * poly_vert, const int nump,
      const unsigned char * poly_rgb);
 
+    template <typename NTYPE0, typename NTYPE1,
+              typename VTYPE, typename ITYPE>
+    void ijkoutPolygonVerticesRGBII
+    (std::ostream & out, 
+     const NTYPE0 * num_poly_vert, const VTYPE * poly_vert,
+     const ITYPE * first_poly_vert, const NTYPE1 num_poly,
+     const unsigned char * poly_rgb);
+
     template <typename NTYPE, typename VTYPE, typename ITYPE>
     void ijkoutPolytopeVertices
     (std::ostream & out, 
@@ -2066,9 +2074,9 @@ namespace IJK {
   /// @param out = Output stream.
   /// @param dim = Dimension of vertices.
   /// @param numv = Number of vertices.
-  /// @param nums = Number of simplices
+  /// @param numf = Number of faces.
   inline void ijkoutPLYheader
-  (std::ostream & out, const int dim, const int numv, const int nums)
+  (std::ostream & out, const int dim, const int numv, const int numf)
   {
     IJK::PROCEDURE_ERROR error("ijkoutPLYheader");
 
@@ -2084,7 +2092,7 @@ namespace IJK {
     out << "property float x" << std::endl;
     out << "property float y" << std::endl;
     out << "property float z" << std::endl;
-    out << "element face " << nums << std::endl;
+    out << "element face " << numf << std::endl;
     out << "property list uchar int vertex_index" << std::endl;
     out << "end_header" << std::endl;
   }
@@ -2217,8 +2225,6 @@ namespace IJK {
    const VTYPE2 * poly2_vlist, const int numv_per_poly2, const int num_poly2)
   {
     const int num_poly = num_poly1 + num_poly2;
-
-
     IJK::PROCEDURE_ERROR error("ijkoutPLY");
 
     if (dim != 3) {
@@ -2247,6 +2253,33 @@ namespace IJK {
     ijkoutPLY(out, dim, vector2pointer(coord), numv,
               vector2pointer(poly1_vlist), numv_per_poly1, num_poly1,
               vector2pointer(poly2_vlist), numv_per_poly2, num_poly2);
+  }
+
+
+  /// Output .ply file.
+  /// Different polytopes may have different numbers of vertices.
+  /// @param out = Output stream.
+  /// @param dim = Dimension of vertices.
+  /// @param coord = Array of coordinates. 
+  ///        coord[dim*i+k] = k'th coordinate of vertex i (k < dim).
+  template <typename CTYPE, typename NTYPE, typename VTYPE, typename ITYPE> 
+  void ijkoutPolytopePLY
+  (std::ostream & out, const int dim, const CTYPE * coord, const int numv,
+   const NTYPE * num_poly_vert, const VTYPE * poly_vert,
+   const ITYPE * first_poly_vert, const int num_poly)
+  {
+    IJK::PROCEDURE_ERROR error("ijkoutPolytopePLY");
+
+    if (dim != 3) {
+      error.AddMessage
+        ("Programming error.  Only dimension 3 implemented for .ply files.");
+      throw error;
+    }
+
+    ijkoutPLYheader(out, dim, numv, num_poly);
+    ijkoutVertexCoord(out, dim, coord, numv);
+    ijkoutPolytopeVertices
+      (out, num_poly_vert, poly_vert, first_poly_vert, num_poly);
   }
 
 
@@ -2309,9 +2342,7 @@ namespace IJK {
    const unsigned char * poly2_rgb)
   {
     const int num_poly = num_poly1 + num_poly2;
-
-
-    IJK::PROCEDURE_ERROR error("ijkoutPLY");
+    IJK::PROCEDURE_ERROR error("ijkoutColorFacesPLY");
 
     if (dim != 3) {
       error.AddMessage
@@ -2365,6 +2396,34 @@ namespace IJK {
        vector2pointer(poly2_color));
   }
 
+
+  /// Output .ply file with colored faces.
+  /// Version where polygons may have different numbers of vertices.
+  /// @param out = Output stream.
+  /// @param dim = Dimension of vertices.
+  /// @param coord = Array of coordinates. 
+  ///        coord[dim*i+k] = k'th coordinate of vertex i (k < dim).
+  template <typename CTYPE, typename NTYPE, typename VTYPE, typename ITYPE> 
+  void ijkoutColorFacesPLYII
+  (std::ostream & out, const int dim, const CTYPE * coord, const int numv,
+   const NTYPE * num_poly_vert, const VTYPE * poly_vert,
+   const ITYPE * first_poly_vert, const int num_poly,
+   const unsigned char * poly_rgb)
+  {
+    IJK::PROCEDURE_ERROR error("ijkoutColorFacesPLYII");
+
+    if (dim != 3) {
+      error.AddMessage
+        ("Programming error.  Only dimension 3 implemented for .ply files.");
+      throw error;
+    }
+
+    ijkoutColorFacesPLYheader(out, dim, numv, num_poly);
+    ijkoutVertexCoord(out, dim, coord, numv);
+    ijkoutPolygonVerticesRGBII
+      (out, num_poly_vert, poly_vert, first_poly_vert, num_poly, poly_rgb);
+
+  }
 
   // ******************************************
   // Write .ply edge file
@@ -2480,7 +2539,7 @@ namespace IJK {
   // Output Fig polygonal lines.
   template <typename CTYPE, typename VTYPE, typename SCALE_TYPE> 
   void ijkoutFIGpolyline
-  (std::ostream & out, const int dim, const CTYPE * coord, const int numv,
+  (std::ostream & out, const CTYPE * coord, const int numv,
    const VTYPE * seg, const int nums, const SCALE_TYPE scale_coord)
   {
     using std::vector;
@@ -2556,6 +2615,23 @@ namespace IJK {
   }
 
 
+  /// Output FIG file header.
+  inline void ijkoutFIGheader(std::ostream & out, const bool flag_metric)
+  {
+    // FIG header
+    out << "#FIG 3.2" << std::endl;
+
+    out << "Landscape" << std::endl;
+    out << "Center" << std::endl;
+    if (flag_metric) { out << "Metric" << std::endl; }
+    else { out << "Inches" << std::endl; }
+    out << "Letter" << std::endl;
+    out << "100.00" << std::endl;
+    out << "Single" << std::endl;
+    out << "-2" << std::endl;
+    out << "1200 2" << std::endl;
+  }
+
   /// \brief Output Fig .fig file.
   /// @param out = output stream
   /// @param dim = dimension.  Must be 2.
@@ -2578,18 +2654,7 @@ namespace IJK {
     if (dim != 2)
       throw error("Illegal dimension.  Fig files are only for dimension 2.");
 
-    // FIG header
-    out << "#FIG 3.2" << std::endl;
-
-    out << "Landscape" << std::endl;
-    out << "Center" << std::endl;
-    if (flag_metric) { out << "Metric" << std::endl; }
-    else { out << "Inches" << std::endl; }
-    out << "Letter" << std::endl;
-    out << "100.00" << std::endl;
-    out << "Single" << std::endl;
-    out << "-2" << std::endl;
-    out << "1200 2" << std::endl;
+    ijkoutFIGheader(out, flag_metric);
 
     if (!flag_polyline) {
       // output each line segment separately line segments
@@ -2609,8 +2674,72 @@ namespace IJK {
       }
     }
     else {
-      ijkoutFIGpolyline(out, dim, coord, numv, seg, nums, scale_coord);
+      ijkoutFIGpolyline(out, coord, numv, seg, nums, scale_coord);
     }
+
+  }
+
+
+  /// \brief Output Fig .fig file of polygons.
+  /// @param out = output stream
+  /// @param dim = dimension.  Must be 2.
+  /// @param coord[2*i+k] = k'th coordinate of vertex j  (k < dim)
+  /// @param numv = number of vertices 
+  /// @param flag_metric: if true, output "Metric" as units
+  ///              if false, output "Inches"
+  template <typename DTYPE, typename CTYPE, 
+            typename NTYPE0, typename NTYPE1, typename NTYPE2,
+            typename VTYPE, typename ITYPE,
+            typename SCALE_TYPE> void ijkoutPolygonFIG
+  (std::ostream & out, const DTYPE dim, 
+   const CTYPE * coord, const NTYPE0 numv,
+   const NTYPE1 * num_poly_vert, const VTYPE * poly_vert,
+   const ITYPE * first_poly_vert, const NTYPE2 num_poly,
+   const SCALE_TYPE scale_coord,
+   const bool flag_polyline = false, const bool flag_metric = false)
+  {
+    IJK::PROCEDURE_ERROR error("ijkoutFIG");
+    const int cap_style = 1;             // round cap
+
+    if (dim != 2)
+      throw error("Illegal dimension.  Fig files are only for dimension 2.");
+
+    ijkoutFIGheader(out, flag_metric);
+
+    for (NTYPE2 ipoly = 0; ipoly < num_poly; ipoly++) {
+
+      out << "2 1 0 1 0 7 50 -1 -1 0.000 0 "
+          << cap_style << " -1 0 0 ";
+
+      if (num_poly_vert[ipoly] > 2) {
+        out << num_poly_vert[ipoly]+1 << std::endl;
+
+      }
+      else {
+        out << num_poly_vert[ipoly] << std::endl;
+      }
+
+      out << "    ";
+      for (NTYPE1 j = 0; j < num_poly_vert[ipoly]; j++) {
+        NTYPE1 k = first_poly_vert[ipoly] + j;
+        VTYPE iv = poly_vert[k];
+        for (int k2 = 0; k2 < 2; k2++) {
+          int x = int(scale_coord*coord[2*iv+k2]);
+          out << "  " << x;
+        }
+      }
+
+      if (num_poly_vert[ipoly] > 2) {
+        NTYPE1 k = first_poly_vert[ipoly];
+        VTYPE iv = poly_vert[k];
+        for (int k2 = 0; k2 < 2; k2++) {
+          int x = int(scale_coord*coord[2*iv+k2]);
+          out << "  " << x;
+        }
+      }
+      out << std::endl;
+    }
+
   }
 
 
@@ -2822,6 +2951,37 @@ namespace IJK {
         out << " ";  // Add another space
 
         ijkoutRGB(out, is, poly_rgb);
+        out << std::endl;
+      }
+    }
+
+
+    /// Output polygon vertices and polygon rgb.
+    /// Version where polygons may have different numbers of vertices.
+    /// Single rgb per polygon.
+    /// @param out Output stream.
+    /// @param numv_per_polygon Number of vertices per polygon.
+    /// @pre     All polygons have the same number of vertices.
+    /// @param poly_vert[] Array of simplex vertices.
+    ///        poly_vert[dim*j+k] = k'th vertex index of polygon j.
+    /// @param nump Number of polygons.
+    template <typename NTYPE0, typename NTYPE1,
+              typename VTYPE, typename ITYPE>
+    void ijkoutPolygonVerticesRGBII
+    (std::ostream & out, 
+     const NTYPE0 * num_poly_vert, const VTYPE * poly_vert,
+     const ITYPE * first_poly_vert, const NTYPE1 num_poly,
+     const unsigned char * poly_rgb)
+    {
+      for (NTYPE1 ipoly = 0; ipoly < num_poly; ipoly++) {
+        const NTYPE0 numv = num_poly_vert[ipoly];
+        out << numv << " ";
+        for (int iv = 0; iv < numv; iv++) {
+          out << poly_vert[ipoly*numv + iv] << " ";
+        }
+        out << " ";  // Add another space
+
+        ijkoutRGB(out, ipoly, poly_rgb);
         out << std::endl;
       }
     }
