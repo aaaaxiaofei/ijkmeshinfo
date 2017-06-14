@@ -210,8 +210,9 @@ void identify_nonmanifold();
 void identify_nonmanifold_facets();
 int identify_nonmanifold_vertices();
 int identify_nonmanifold_edges();
-bool is_internal(const BOUNDING_BOX & bounding_box, 
-                 const vector<int> & facet_vlist, const int jf);
+bool is_internal
+(const BOUNDING_BOX & bounding_box, const vector<int> & facet_vlist, 
+ const int numv_per_facet, const int jf);
 
 // plot routines
 void compute_polygon_angles(ANGLE_TABLE & angle_table);
@@ -272,6 +273,7 @@ bool intersect_triangle_triangle
 void read_input_file(const char * input_filename);
 void memory_exhaustion();
 void parse_command_line(int argc, char **argv);
+void check_input();
 void usage_error(), help_msg();
 
 // PARAMETER TYPE
@@ -321,6 +323,8 @@ int main(int argc, char **argv)
 
     read_input_file(input_filename);
 
+    check_input();
+
     sort_poly();
     identify_duplicates();
 
@@ -358,8 +362,19 @@ int main(int argc, char **argv)
       }
       else {
 
-        if (terse_flag && passed_all_manifold_tests && passed_boundary_test) {
-          cout << "Passed all manifold and boundary tests." << endl;
+        bool flag_passed_tests = passed_all_manifold_tests;
+        if (mesh_dimension < dimension) {
+          flag_passed_tests = 
+            (passed_all_manifold_tests && passed_boundary_test);
+        }
+
+        if (terse_flag && flag_passed_tests) {
+          if (mesh_dimension < dimension) {
+            cout << "Passed all manifold and boundary tests." << endl;
+          }
+          else {
+            cout << "Passed all manifold tests." << endl;
+          }
         }
         else if (mesh_dimension == 2 && output_filename != NULL) {
           write_nonmanifold_edges();
@@ -369,13 +384,15 @@ int main(int argc, char **argv)
           if (terse_flag) {
             if (!passed_all_manifold_tests) 
               { cout << "Failed manifold tests.  "; }
-            if (flag_report_deep) {
-              if (num_deep_boundary_facets != 0) 
-                { cout << "Failed boundary test.";  }
-            }
-            else {
-              if (num_internal_boundary_facets != 0) 
-                { cout << "Failed boundary test.";  }
+            if (mesh_dimension < dimension) {
+              if (flag_report_deep) {
+                if (num_deep_boundary_facets != 0) 
+                  { cout << "Failed boundary test.";  }
+              }
+              else {
+                if (num_internal_boundary_facets != 0) 
+                  { cout << "Failed boundary test.";  }
+              }
             }
             cout << endl;
           }
@@ -507,8 +524,11 @@ int main(int argc, char **argv)
   delete [] simplex_vert;;
   delete [] vertex_coord;
 
-  if (manifold_flag && 
-      (!passed_all_manifold_tests || !passed_boundary_test)) {
+  if (manifold_flag && !passed_all_manifold_tests) {
+    return(1);
+  }
+  if (manifold_flag && (mesh_dimension < dimension) && 
+      !passed_boundary_test) {
     return(1);
   }
   else if (flag_report_self_intersections && flag_self_intersect) {
@@ -564,7 +584,7 @@ void read_input_file(const char * input_filename)
 
       if (dimension == 3 && num_vert_per_poly == 4) {
         cerr << "Unable to determine mesh dimension." << endl;
-        cerr << "Input polytopes could be tetrahedra or quadrilaterals."
+        cerr << "  Input polytopes could be tetrahedra or quadrilaterals."
              << endl;
         cerr << "Use option -mesh_dim <mdim>." << endl;
         exit(20);
@@ -601,9 +621,48 @@ void read_input_file(const char * input_filename)
     else {
       flag_polyfile = true;
     }
+
+    if (flag_cube_file && is_mesh_dimension_set) {
+      const int numv_per_cube = (1 << mesh_dimension);
+      if (numv_per_cube != num_vert_per_poly) {
+        const int cube_dimension = 
+          IJK::compute_cube_dimension_from_num_vertices(num_vert_per_poly);
+        cerr << "Usage error.  Mismatch between input file of cubes and -mesh_dim argument." << endl;
+        cerr << "  Input file cubes have "
+             << numv_per_cube << " vertices and dimension "
+             << cube_dimension << "." << endl;
+        cerr << "  Argument of -mesh_dim is " << mesh_dimension << "." << endl;
+        cerr << "  Change argument of -mesh_dim to " << cube_dimension
+             << "." << endl;
+        exit(20);
+      }
+    }
+
+    if (is_mesh_dimension_set) {
+      if (num_vert_per_poly <= mesh_dimension) {
+        cerr << "Warning:  All polygons in input file are degenerate."
+             << endl;
+        cerr << "  Argument of -mesh_dim is " << mesh_dimension << "." << endl;
+        cerr << "  All polygons have "  << num_vert_per_poly
+             << " vertices." << endl;
+        cerr << endl;
+      }
+    }
+
   }
   else {
     flag_polyfile = true;
+
+    if (!is_mesh_dimension_set) {
+      mesh_dimension = dimension-1;
+
+      cerr << "Warning: Unable to determine mesh dimension from input file."
+           << endl;
+      cerr << "  Assuming mesh dimension is " << mesh_dimension << "." << endl;
+      cerr << "  Use option \"-mesh_dim {mdim}\" to specify mesh dimension."
+           << endl;
+      cerr << endl;
+    }
   }
 
   if (flag_internal) {
@@ -643,12 +702,10 @@ void output_general_info()
   }
 
   cout << "Volume dimension: " << dimension << endl;
-  if (!flag_polyfile) {
-    cout << "Mesh dimension: " << mesh_dimension << endl;
-  }
+  cout << "Mesh dimension: " << mesh_dimension << endl;
   cout << "Number of mesh vertices: " << num_vertices << endl;
   if (flag_polyfile) {
-    if (dimension <= 3) {
+    if (mesh_dimension <= 2) {
       cout << "Number of mesh polygons: " << num_poly << endl;
     }
     else {
@@ -719,56 +776,54 @@ void output_min_max_angle
 {
   string polyname = "polygon";
 
-  if (is_mesh_dimension_set || !flag_polyfile) {
-    if (mesh_dimension == 2) {
-      ANGLE_TYPE min_angle, max_angle;
-      compute_min_max_polygon_angles
-        (flag_internal, num_poly_edges, min_angle, max_angle);
+  if (mesh_dimension == 2) {
+    ANGLE_TYPE min_angle, max_angle;
+    compute_min_max_polygon_angles
+      (flag_internal, num_poly_edges, min_angle, max_angle);
 
-      if (num_poly_edges == 3) { polyname = "triangle"; }
-      else if (num_poly_edges == 4) { polyname = "quadrilateral"; }
-      else if (num_poly_edges == 5) { polyname = "pentagon"; }
-      else if (num_poly_edges == 6) { polyname = "hexagon"; }
-      else if (num_poly_edges > 0) { 
-        string s;
-        val2string(num_poly_edges, s);
-        polyname = string("polygon (") + s + " edges)"; };
+    if (num_poly_edges == 3) { polyname = "triangle"; }
+    else if (num_poly_edges == 4) { polyname = "quadrilateral"; }
+    else if (num_poly_edges == 5) { polyname = "pentagon"; }
+    else if (num_poly_edges == 6) { polyname = "hexagon"; }
+    else if (num_poly_edges > 0) { 
+      string s;
+      val2string(num_poly_edges, s);
+      polyname = string("polygon (") + s + " edges)"; };
 
-      if (flag_output_min_angle) {
-        cout << "Min ";
-        if (flag_internal) { cout << "internal "; }
-        cout << polyname << " angle: ";
-        cout << min_angle << endl; 
-      }
-      if (flag_output_max_angle) {
-        cout << "Max ";
-        if (flag_internal) { cout << "internal "; }
-        cout << polyname << " angle: ";
-        cout << max_angle << endl; 
-      }
+    if (flag_output_min_angle) {
+      cout << "Min ";
+      if (flag_internal) { cout << "internal "; }
+      cout << polyname << " angle: ";
+      cout << min_angle << endl; 
+    }
+    if (flag_output_max_angle) {
+      cout << "Max ";
+      if (flag_internal) { cout << "internal "; }
+      cout << polyname << " angle: ";
+      cout << max_angle << endl; 
+    }
 
-      int num_le, num_ge;
-      if (is_min_angle_set || is_max_angle_set) {
-        compute_num_polygon_angles
-          (flag_internal, angle_le, angle_ge, num_le, num_ge);
-        if (is_min_angle_set && flag_output_min_angle) {
-          if (flag_internal) {
-            cout << "Number of internal polygons with angles <= ";
-          }
-          else {
-            cout << "Number of polygons with angles <= ";
-          }
-          cout << angle_le << ": " << num_le << endl;
+    int num_le, num_ge;
+    if (is_min_angle_set || is_max_angle_set) {
+      compute_num_polygon_angles
+        (flag_internal, angle_le, angle_ge, num_le, num_ge);
+      if (is_min_angle_set && flag_output_min_angle) {
+        if (flag_internal) {
+          cout << "Number of internal polygons with angles <= ";
         }
-        if (is_max_angle_set && flag_output_max_angle) {
-          if (flag_internal) {
-            cout << "Number of internal polygons with angles >= ";
-          }
-          else {
-            cout << "Number of polygons with angles >= ";
-          }
-          cout << angle_ge << ": " << num_ge << endl;
+        else {
+          cout << "Number of polygons with angles <= ";
         }
+        cout << angle_le << ": " << num_le << endl;
+      }
+      if (is_max_angle_set && flag_output_max_angle) {
+        if (flag_internal) {
+          cout << "Number of internal polygons with angles >= ";
+        }
+        else {
+          cout << "Number of polygons with angles >= ";
+        }
+        cout << angle_ge << ": " << num_ge << endl;
       }
     }
   }
@@ -849,7 +904,10 @@ void output_vertex_info(const int vertex_index)
 
 void output_simplex_info(const int simplex_index)
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
+  */
+  const int numv_per_simplex = num_vert_per_poly;
 
   cout << "Simplex: " << simplex_index << endl;
 
@@ -982,24 +1040,28 @@ void output_manifold_info()
       }
     }
 
-    if (mesh_info.num_nonmanifold_edges == 0) {
-      if (!terse_flag) {
-        cout << "No non-manifold edges." << endl;
-        flag_newline = false;
+    if (flag_cube_file && mesh_dimension > 2) {
+      // If mesh_dimension == 2, then edges are reported as facets.
+      // Non-manifold edge detection only implemented for cubes.
+
+      if (mesh_info.num_nonmanifold_edges == 0) {
+        if (!terse_flag) {
+          cout << "No non-manifold edges." << endl;
+          flag_newline = false;
+        }
+      }
+      else {
+        if (!flag_newline && !terse_flag) { cout << endl; }
+        cout << "Num non-manifold edges " 
+             << mesh_info.num_nonmanifold_edges << endl;
+        if (!terse_flag) {
+          output_nonmanifold_edges();
+          cout << endl;
+          flag_newline = true;
+        }
+
       }
     }
-    else {
-      if (!flag_newline && !terse_flag) { cout << endl; }
-      cout << "Num non-manifold edges " 
-           << mesh_info.num_nonmanifold_edges << endl;
-      if (!terse_flag) {
-        output_nonmanifold_edges();
-        cout << endl;
-        flag_newline = true;
-      }
-
-    }
-
 
     if (mesh_info.num_nonmanifold_vertices == 0) {
       if (!terse_flag) {
@@ -1026,7 +1088,8 @@ void output_manifold_info()
       }
     }
 
-    output_internal_boundary_facets();
+    if (mesh_dimension < dimension)
+      { output_internal_boundary_facets(); }
   }
   else {
     if (!terse_flag) {
@@ -1158,8 +1221,27 @@ void output_nonmanifold_edges()
 
 void output_internal_boundary_facets()
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
-  const int numv_per_facet = mesh_dimension;
+  */
+  int numv_per_facet;
+  IJK::PROCEDURE_ERROR error("output_internal_boundary_facet");
+
+  if (flag_cube_file) {
+    CUBE_TYPE cube(mesh_dimension);
+    numv_per_facet = cube.NumFacetVertices();
+  }
+  else if (flag_simplex_file) {
+    numv_per_facet = mesh_dimension;
+  }
+  else if (mesh_dimension == 2) {
+    numv_per_facet = 2;
+  }
+  else {
+    error.AddMessage
+      ("Programming error.  Unable to determine number of vertices per facet.");
+    throw error;
+  }
 
   if (!terse_flag) {
     cout << "Bounding box: (";
@@ -1545,12 +1627,20 @@ void output_poly(const int ipoly)
 void output_simplex(const int * simplex)
 // output simplex
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension + 1;
+  */
 
   cout << "(";
+  /* OBSOLETE
   for (int j = 0; j < numv_per_simplex; j++) {
+  */
+  for (int j = 0; j < num_vert_per_poly; j++) {
     cout << *(simplex+j);
+    /* OBSOLETE
     if (j+1 < numv_per_simplex)
+    */
+    if (j+1 < num_vert_per_poly)
       { cout << "  "; }
   }
   cout << ")";
@@ -1642,7 +1732,9 @@ bool poly_contains_vertex
 
 void output_simplices()
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
+  */
 
   if (contains_vertex_flag) {
     if (contains_vertex_index < 0 || contains_vertex_index >= num_vertices)
@@ -1657,19 +1749,33 @@ void output_simplices()
   int num_out = 0;
   for (int js = 0; js < num_simplices; js++) {
 
+    /* OBSOLETE
     const int * svert = simplex_vert + js*numv_per_simplex;
+    */
+    const int * svert = simplex_vert + js*num_vert_per_poly;
 
     if (contains_vertex_flag) {
 
+      /* OBSOLETE
       if (!simplex_contains_vertex
           (numv_per_simplex, svert, contains_vertex_index))
+        { continue; }
+      */
+      if (!simplex_contains_vertex
+          (num_vert_per_poly, svert, contains_vertex_index))
         { continue; }
     }
 
     if (contains_edge_flag) {
 
+      /* OBSOLETE
       if (!simplex_contains_edge
           (numv_per_simplex, svert, 
+           edge_end0_index, edge_end1_index))
+        { continue; }
+      */
+      if (!simplex_contains_edge
+          (num_vert_per_poly, svert, 
            edge_end0_index, edge_end1_index))
         { continue; }
     }
@@ -1677,9 +1783,15 @@ void output_simplices()
     num_out++;
     cout << "Simplex " << js << ": ";
     cout << "(";
+    /* OBSOLETE
     for (int k = 0; k < numv_per_simplex; k++) {
       cout << svert[k];
       if (k+1 < numv_per_simplex) { cout << ","; }
+    }
+    */
+    for (int k = 0; k < num_vert_per_poly; k++) {
+      cout << svert[k];
+      if (k+1 < num_vert_per_poly) { cout << ","; }
     }
     cout << ")";
     cout << endl;
@@ -2082,7 +2194,10 @@ void compute_bounding_box()
 /// Compute number of edges.
 int compute_num_edges()
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
+  */
+  const int numv_per_simplex = num_vert_per_poly;
   const int nume_per_simplex = numv_per_simplex*(numv_per_simplex-1)/2;
   const int max_elist_length = 2*nume_per_simplex*num_simplices;
 
@@ -2594,7 +2709,9 @@ void identify_nonmanifold()
 {
   if (flag_simplex_file || mesh_dimension == 2 || flag_cube_file) {
     compute_facet_info();
-    mesh_info.num_nonmanifold_edges = identify_nonmanifold_edges();
+
+    if (flag_cube_file && mesh_dimension > 2)
+      { mesh_info.num_nonmanifold_edges = identify_nonmanifold_edges(); }
     mesh_info.num_nonmanifold_vertices = identify_nonmanifold_vertices();
     mesh_info.num_deep_nonmanifold_vertices = 
       count_deep_vertices(nonmanifold_vert);
@@ -2607,7 +2724,10 @@ bool simplex_equals(const int * simplex_vert, const int num_simplices,
 // return true if is0 equals is1
 // assumes simplex vertices are listed in sorted order
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
+  */
+  const int numv_per_simplex = num_vert_per_poly;
 
   for (int k = 0; k < numv_per_simplex; k++) {
     if (simplex_vert[is0*numv_per_simplex+k] !=
@@ -2618,13 +2738,11 @@ bool simplex_equals(const int * simplex_vert, const int num_simplices,
   return(true);
 }
 
-bool facet_equals(const int * facet_vert, const int numf,
-                  const int jf0, const int jf1)
-// return true if jf0 equals jf1
-// assumes facet vertices are listed in sorted order
+// Return true if jf0 equals jf1.
+// @pre facet vertices are listed in sorted order.
+bool facet_equals
+(const int * facet_vert, const int numv_per_facet, const int jf0, const int jf1)
 {
-  const int numv_per_facet = mesh_dimension;
-
   for (int k = 0; k < numv_per_facet; k++) {
     if (facet_vert[jf0*numv_per_facet+k] !=
         facet_vert[jf1*numv_per_facet+k])
@@ -2821,8 +2939,7 @@ void identify_nonmanifold_facets()
     int jf = index_sorted[j];
     int kf = index_sorted[k];
     while (k < num_proper_facets && 
-           facet_equals
-           (&(facet_vert_list.front()), num_proper_facets, jf, kf)) {
+           facet_equals(&(facet_vert_list.front()), numv_per_facet, jf, kf)) {
       k++;
       kf = index_sorted[k];
     };
@@ -2843,6 +2960,14 @@ void identify_nonmanifold_facets()
     }
     else if (num_duplicate == 1) {
 
+      // *** DEBUG ***
+      /*
+      cerr << "Facet ";
+      IJK::print_list(cerr, &(facet_vert_list[jf*numv_per_facet]),
+                      numv_per_facet);
+      cerr << " is on boundary." << endl;
+      */
+
       // store boundary facet
       for (int iv = jf*numv_per_facet; iv < (jf+1)*numv_per_facet; iv++) {
         int iv2 = facet_vert_list[iv];
@@ -2851,7 +2976,8 @@ void identify_nonmanifold_facets()
 
       int num_boundary_facets = boundary_facet_vert.size()/numv_per_facet;
       bool flag_internal =
-        is_internal(bounding_box, boundary_facet_vert, num_boundary_facets-1);
+        is_internal(bounding_box, boundary_facet_vert, 
+                    numv_per_facet, num_boundary_facets-1);
       internal_boundary_facet.push_back(flag_internal);
       if (flag_internal) { num_internal_boundary_facets++; }
 
@@ -2861,7 +2987,7 @@ void identify_nonmanifold_facets()
       else {
         flag_internal =
           is_internal(contracted_bounding_box, boundary_facet_vert,
-                      num_boundary_facets-1);
+                      numv_per_facet, num_boundary_facets-1);
       }
       far_from_bounding_box.push_back(flag_internal);
       if (flag_internal) { num_deep_boundary_facets++; }
@@ -2923,7 +3049,10 @@ int count_deep_vertices(const std::vector<int> & vlist)
 bool are_simplices_adjacent(int ks, int js)
 // return true if simplices ks and js share facet
 {
+  /* OBSOLETE
   const int numv_per_simplex = mesh_dimension+1;
+  */
+  const int numv_per_simplex = num_vert_per_poly;
   const int numv_per_facet = mesh_dimension;
   int jfacet_vert[numv_per_simplex];
   int kfacet_vert[numv_per_simplex];
@@ -3289,12 +3418,12 @@ int identify_nonmanifold_edges()
   return(num_nonmanifold_edges);
 }
 
+// Return true if facet jf is internal
 bool is_internal(const BOUNDING_BOX & bounding_box, 
-                 const vector<int> & facet_vlist, const int jf)
-// true if facet jf is internal
+                 const vector<int> & facet_vlist, 
+                 const int numv_per_facet,
+                 const int jf)
 {
-  const int numv_per_facet = mesh_dimension;
-
   for (int d = 0; d < dimension; d++) {
     COORD_TYPE minc = bounding_box.MinCoord(d);
     COORD_TYPE maxc = bounding_box.MaxCoord(d);
@@ -4146,6 +4275,18 @@ void parse_command_line(int argc, char **argv)
       exit(20);
     }
   }
+}
+
+void check_input()
+{
+  if (!flag_simplex_file) {
+
+    if (contains_edge_flag) {
+      cerr << "Usage error.  Option \"-containse\" only implemented for mesh of simplices." << endl;
+      exit(20);
+    }
+  }
+
 }
 
 void usage_msg()

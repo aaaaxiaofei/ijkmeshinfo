@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2011 Rephael Wenger
+  Copyright (C) 2011-2017 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -188,7 +188,7 @@ namespace IJK {
     VTYPE IncidentEdge(const VTYPE iv, const NTYPE d) const
     { return(incident_edge[iv*this->NumIncidentEdges()+d]); };
 
-    /// Return direction orthongal to facet ifacet
+    /// Return direction orthogonal to facet ifacet.
     const DTYPE FacetOrthDir(const VTYPE ifacet) const
     { return(ifacet%this->Dimension()); }
 
@@ -561,6 +561,28 @@ namespace IJK {
     long numv = compute_num_cube_vertices(dimension);
     return((numv*dimension)/2);
   }
+
+
+  // **************************************************
+  // TEMPLATE FUNCTIONS: COMPUTE CUBE DIMENSION
+  // **************************************************
+
+  /// Compute dimension of cube from number of cube vertices.
+  /// @param numv Number of cube vertices.
+  /// @pre numv is a power of 2.
+  template <typename NTYPE>
+  NTYPE compute_cube_dimension_from_num_vertices(const NTYPE numv)
+  {
+    NTYPE n = numv;
+    NTYPE dimension = 0;
+    while (n != 0) {
+      n = (n >> 1);
+      dimension++;
+    }
+
+    return(dimension-1);
+  }
+
 
   // **************************************************
   // TEMPLATE FUNCTIONS: COMPUTE COORDINATES

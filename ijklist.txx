@@ -350,6 +350,11 @@ namespace IJK {
     /// @pre Array first_element[] is set.
     void AllocArrayElement();
 
+    /// Add a list of length list_length2.
+    template <typename ETYPE2, typename NTYPE2>
+    void AddList(const ETYPE2 list2_element[],
+                 const NTYPE2 list2_length);
+
     /// Add lists where each list has length list_length2.
     /// @param num_elements Number of elements in each list.
     template <typename ETYPE2, typename NTYPE1, typename NTYPE2>
@@ -361,6 +366,18 @@ namespace IJK {
     template <typename ETYPE2>
     void AddLists(const std::vector<ETYPE2> & list2_element,
                   const NTYPE list2_length);
+
+    /// Replace elements of each list.
+    /// @param replacement[] Element i is replaced by replacement[i].
+    /// @pre Each element has integer value 
+    ///    in range [0..(remplacement.size()-1].    
+    template <typename ETYPE2>
+    void ReplaceElements(const ETYPE2 * replacement);
+
+    /// Replace elements of each list.
+    /// - C++ STL vector format for replacement.
+    template <typename ETYPE2>
+    void ReplaceElements(const std::vector<ETYPE2> & replacement);
 
     /// Sort the elements of each list.
     void SortEachList();
@@ -515,6 +532,23 @@ namespace IJK {
   }
 
   template <typename ETYPE, typename NTYPE>
+  template <typename ETYPE2, typename NTYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  AddList(const ETYPE2 list2_element[],
+          const NTYPE2 list2_length)
+  {
+    const NTYPE ifirst = element.size();
+    list_length.push_back(list2_length);
+    first_element.push_back(ifirst);
+
+    for (NTYPE j = 0; j < list2_length; j++) {
+      const ETYPE el = list2_element[j];
+      element.push_back(el);
+    }
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
   template <typename ETYPE2, typename NTYPE1, typename NTYPE2>
   void LIST_OF_LISTS<ETYPE,NTYPE>::
   AddLists(const ETYPE2 list2_element[],
@@ -534,6 +568,7 @@ namespace IJK {
     }
   }
 
+
   template <typename ETYPE, typename NTYPE>
   template <typename ETYPE2>
   void LIST_OF_LISTS<ETYPE,NTYPE>::
@@ -543,6 +578,30 @@ namespace IJK {
     AddLists(IJK::vector2pointer(list2_element), 
              list2_element.size(), list2_length);
   }
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename ETYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  ReplaceElements(const ETYPE2 * replacement)
+  {
+    for (NTYPE ilist = 0; ilist < NumLists(); ilist++) {
+      for (NTYPE j = 0; j < ListLength(ilist); j++) {
+        const NTYPE k = ElementIndex(ilist, j);
+        const ETYPE2 x = element[k];
+        element[k] = replacement[x];
+      }
+    }
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename ETYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  ReplaceElements(const std::vector<ETYPE2> & replacement)
+  {
+    ReplaceElements(IJK::vector2pointer(replacement));
+  }
+
 
   template <typename ETYPE, typename NTYPE>
   void LIST_OF_LISTS<ETYPE,NTYPE>::SortEachList()

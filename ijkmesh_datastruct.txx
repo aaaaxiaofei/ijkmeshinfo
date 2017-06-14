@@ -81,6 +81,12 @@ namespace IJK {
     bool DoesPoly2DContainEdge
     (const NTYPE ipoly, const VTYPE0 iv0, const VTYPE1 iv1) const;
 
+    /// Add a polytope with list_length vertices.
+    template <typename VTYPE2, typename NTYPE2>
+    void AddPolytope(const VTYPE2 poly_vert_list[],
+                     const NTYPE2 list_length)
+    { this->AddList(poly_vert_list, list_length); }
+
     /// Add polytopes from list where each polytope has 
     ///   num_vert_per_poly vertices.
     /// @param num_vert Total number of vertices in poly_vert_list[].

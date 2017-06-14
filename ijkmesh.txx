@@ -594,6 +594,7 @@ namespace IJK {
   ///@{
 
   /// Delete duplicate polytope vertices.
+  /// *** ORDER OF vlist and num_poly_vert INCONSISTENT WITH IO ROUTINES ***
   template <typename NUMV_TYPE, typename VTYPE, typename ITYPE, 
             typename NTYPE>
   void delete_poly_vert_duplicate
@@ -624,7 +625,9 @@ namespace IJK {
     }
   }
 
-  /// Delete polytope vertices with duplicate coodinates.
+
+  /// Delete polytope vertices with duplicate coordinates.
+  /// *** ORDER OF vlist and num_poly_vert INCONSISTENT WITH IO ROUTINES ***
   template <typename DTYPE, typename CTYPE, typename NUMV_TYPE, typename VTYPE,
             typename ITYPE, typename NTYPE>
   void delete_poly_vert_duplicate_coord
@@ -696,6 +699,7 @@ namespace IJK {
     return(true);
   }
 
+
   /// Return true if all polytope vertices are is in region.
   template <typename DTYPE, typename CTYPE0, typename CTYPE1, typename CTYPE2,
             typename VTYPE, typename NUMV_TYPE>
@@ -713,7 +717,9 @@ namespace IJK {
     return(true);
   }
 
+
   /// Delete any polytopes with vertices outside the given region.
+  /// *** ORDER OF vlist and num_poly_vert INCONSISTENT WITH IO ROUTINES ***
   template <typename DTYPE, typename CTYPE0, typename CTYPE1, typename CTYPE2,
             typename NUMV_TYPE, typename VTYPE, typename ITYPE, typename NTYPE>
   void delete_poly_outside_region
@@ -742,8 +748,10 @@ namespace IJK {
     num_poly = k;
   }
 
+
   /// Delete any vertices outside the given region.
   /// Also deletes any polytopes incident on those vertices
+  /// *** ORDER OF vlist and num_poly_vert INCONSISTENT WITH IO ROUTINES ***
   template <typename DTYPE, typename CTYPE0, typename CTYPE1, typename CTYPE2,
             typename NTYPE,
             typename NUM_POLYV_TYPE, typename VTYPE, typename ITYPE,
