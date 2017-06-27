@@ -87,6 +87,13 @@ namespace IJK {
                      const NTYPE2 list_length)
     { this->AddList(poly_vert_list, list_length); }
 
+    /// Add a polytope.
+    /// - C++ STL vector type for array poly_vert_list[].
+    /// @param poly_vert_list List of polytope vertices in C++ STL vector.
+    template <typename VTYPE2>
+    void AddPolytope(const std::vector<VTYPE2> & poly_vert_list)
+    { AddPolytope(&poly_vert_list.front(), poly_vert_list.size()); }
+
     /// Add polytopes from list where each polytope has 
     ///   num_vert_per_poly vertices.
     /// @param num_vert Total number of vertices in poly_vert_list[].
@@ -1260,6 +1267,48 @@ namespace IJK {
               num_incident_edges[iv1]++;
             }
           }
+        }
+      }
+    }
+  }
+
+
+  /// Compute vertex link in mesh of cubes.
+  /// @param cube Cube information.
+  /// @pre cube has same dimension as cubes in mesh.
+  /// @param[out] link_mesh Polygonal mesh of links.
+  ///   Note that quadrilaterals are stored lower-left, lower-right,
+  ///   upper-left, upper_right, NOT in clockwise or counter-clockwise order.
+  template <typename POLYMESH_TYPE, typename VERTEX_POLY_INCIDENCE_TYPE,
+            typename VTYPE, typename CUBE_TYPE, typename POLYMESH2_TYPE>
+  void compute_vertex_link_in_cube_mesh
+  (const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+   const VTYPE iv,
+   const CUBE_TYPE & cube,
+   POLYMESH2_TYPE & link_mesh)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename POLYMESH_TYPE::NUMBER_TYPE NTYPE;
+
+    const NTYPE num_vertices_per_facet = cube.NumFacetVertices();
+    std::vector<VTYPE> facet_vertex(num_vertices_per_facet);
+
+    link_mesh.Clear();
+
+    for (NTYPE j = 0; j < vertex_info.NumIncidentPoly(iv); j++) {
+      const NTYPE jpoly = vertex_info.IncidentPoly(iv,j);
+
+      for (NTYPE jfacet = 0; jfacet < cube.NumFacets(); jfacet++) {
+
+        for (NTYPE k = 0; k < num_vertices_per_facet; k++) {
+          const NTYPE k2 = cube.FacetVertex(jfacet, k);
+          const VTYPE kv = polymesh.Vertex(jpoly, k2);
+          facet_vertex[k] = kv;
+        }
+
+        if (!IJK::does_list_contain(facet_vertex, iv)) {
+          link_mesh.AddPolytope(facet_vertex);
         }
       }
     }

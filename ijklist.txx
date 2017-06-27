@@ -196,13 +196,24 @@ namespace IJK {
 
 
   /// Return true if list contains element el.
-  /// Version which does not return location of iloc.
+  /// - Version which does not return location of iloc.
   template <typename T1, typename T2, typename NTYPE>
   bool does_list_contain
   (const T1 * list, const NTYPE list_length, const T2 el)
   {
     NTYPE iloc;
     return(does_list_contain(list, list_length, el, iloc));
+  }
+
+
+  /// Return true if list contains element el.
+  /// - Version which does not return location of iloc.
+  /// - Version using C++ STL vector for array list[].
+  template <typename T1, typename T2>
+  bool does_list_contain
+  (const std::vector<T1> & list, const T2 el)
+  {
+    return(does_list_contain(&list.front(), list.size(), el));
   }
 
 

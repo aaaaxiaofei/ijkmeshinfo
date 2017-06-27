@@ -50,7 +50,10 @@ using namespace IJKMESHINFO;
 using namespace IJK;
 
 // types
-typedef typename IJK::POLYMESH<int,int> POLYMESH_TYPE;
+typedef int VERTEX_INDEX;
+typedef typename IJK::POLYMESH<VERTEX_INDEX,int> POLYMESH_TYPE;
+typedef typename IJK::VERTEX_POLY_INCIDENCE<int,int> 
+VERTEX_POLY_INCIDENCE_TYPE;
 typedef typename IJK::CUBE_FACE_INFO<int,int,int> CUBE_TYPE;
 
 // global variables
@@ -133,7 +136,8 @@ int num_internal_boundary_facets = 0;
 int num_deep_boundary_facets = 0;
 vector<bool> in_nonmanifold_facet;  // true if vertex is in nonmanifold facet
 vector<bool> in_nonmanifold_edge;   // true if vertex is in nonmanifold edge
-vector<int> nonmanifold_vert;       // list of nonmanifold vertices
+vector<bool> nonmanifold_vert;      // true if vertex is nonmanifold
+vector<int> nonmanifold_vert_list;  // list of nonmanifold vertices
 
 vector<int> sorted_poly;            // list of polytopes in sorted order
 
@@ -207,7 +211,7 @@ void set_in_nonmanifold_edge();
 
 // manifold routines
 void identify_nonmanifold();
-void identify_nonmanifold_facets();
+void identify_nonmanifold_and_boundary_facets();
 int identify_nonmanifold_vertices();
 int identify_nonmanifold_edges();
 bool is_internal
@@ -860,7 +864,7 @@ void output_min_max_edge_lengths
       if (flag_output_max_angle) {
         cout << "Max ";
         if (flag_internal) { cout << "internal "; }
-        cout << polyname << " edge_length: ";
+        cout << polyname << " edge length: ";
         cout << max_edge_length << endl; 
       }
     }
@@ -904,9 +908,6 @@ void output_vertex_info(const int vertex_index)
 
 void output_simplex_info(const int simplex_index)
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
   const int numv_per_simplex = num_vert_per_poly;
 
   cout << "Simplex: " << simplex_index << endl;
@@ -1072,7 +1073,7 @@ void output_manifold_info()
     else {
       if (!flag_newline && !terse_flag) { cout << endl; }
 
-      int num_deep = count_deep_vertices(nonmanifold_vert);
+      int num_deep = count_deep_vertices(nonmanifold_vert_list);
       cout << "Num non-manifold vertices:  " 
            << mesh_info.num_nonmanifold_vertices << endl;
 
@@ -1136,11 +1137,18 @@ void output_duplicate_poly()
 
 void output_nonmanifold_facets()
 {
+  const int NUMV_PER_CUBE = 8;
+  const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
   const char * poly_str = "Polytopes";
   const char * facet_str = "facets";
-  const int numv_per_facet = mesh_dimension;
+  int numv_per_facet = mesh_dimension;
   const int num_nonmanifold_facets = 
     nonmanifold_facet_vert.size()/numv_per_facet;
+
+  if (mesh_dimension == 2 || flag_simplex_file) 
+    { numv_per_facet = mesh_dimension;  }
+  else 
+    { numv_per_facet = NUMV_PER_CUBE_FACET; }
 
   if (mesh_dimension == 2) {
     poly_str = "Polygons";
@@ -1221,9 +1229,6 @@ void output_nonmanifold_edges()
 
 void output_internal_boundary_facets()
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
   int numv_per_facet;
   IJK::PROCEDURE_ERROR error("output_internal_boundary_facet");
 
@@ -1559,9 +1564,9 @@ void output_manifold_and_boundary_counts()
   const int numv_per_facet = mesh_dimension;
   const int num_nonmanifold_facets = 
     nonmanifold_facet_vert.size()/numv_per_facet;
-  const int num_deep_vertices = count_deep_vertices(nonmanifold_vert);
+  const int num_deep_vertices = count_deep_vertices(nonmanifold_vert_list);
 
-  cout << nonmanifold_vert.size() << " "
+  cout << nonmanifold_vert_list.size() << " "
        << num_deep_vertices << " "
        << num_nonmanifold_facets << " "
        << num_internal_boundary_facets << " "
@@ -1603,8 +1608,8 @@ void output_nonmanifold_vertices()
 {
   if (!terse_flag) {
     int num_output = 0;
-    for (int i = 0; i < nonmanifold_vert.size(); i++) {
-      cout << "  " << nonmanifold_vert[i];
+    for (int i = 0; i < nonmanifold_vert_list.size(); i++) {
+      cout << "  " << nonmanifold_vert_list[i];
       num_output++;
       if (num_output%10 == 0) { cout << endl; };
     }
@@ -1627,19 +1632,9 @@ void output_poly(const int ipoly)
 void output_simplex(const int * simplex)
 // output simplex
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension + 1;
-  */
-
   cout << "(";
-  /* OBSOLETE
-  for (int j = 0; j < numv_per_simplex; j++) {
-  */
   for (int j = 0; j < num_vert_per_poly; j++) {
     cout << *(simplex+j);
-    /* OBSOLETE
-    if (j+1 < numv_per_simplex)
-    */
     if (j+1 < num_vert_per_poly)
       { cout << "  "; }
   }
@@ -1732,10 +1727,6 @@ bool poly_contains_vertex
 
 void output_simplices()
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
-
   if (contains_vertex_flag) {
     if (contains_vertex_index < 0 || contains_vertex_index >= num_vertices)
       {
@@ -1749,31 +1740,15 @@ void output_simplices()
   int num_out = 0;
   for (int js = 0; js < num_simplices; js++) {
 
-    /* OBSOLETE
-    const int * svert = simplex_vert + js*numv_per_simplex;
-    */
     const int * svert = simplex_vert + js*num_vert_per_poly;
 
     if (contains_vertex_flag) {
-
-      /* OBSOLETE
-      if (!simplex_contains_vertex
-          (numv_per_simplex, svert, contains_vertex_index))
-        { continue; }
-      */
       if (!simplex_contains_vertex
           (num_vert_per_poly, svert, contains_vertex_index))
         { continue; }
     }
 
     if (contains_edge_flag) {
-
-      /* OBSOLETE
-      if (!simplex_contains_edge
-          (numv_per_simplex, svert, 
-           edge_end0_index, edge_end1_index))
-        { continue; }
-      */
       if (!simplex_contains_edge
           (num_vert_per_poly, svert, 
            edge_end0_index, edge_end1_index))
@@ -1783,12 +1758,6 @@ void output_simplices()
     num_out++;
     cout << "Simplex " << js << ": ";
     cout << "(";
-    /* OBSOLETE
-    for (int k = 0; k < numv_per_simplex; k++) {
-      cout << svert[k];
-      if (k+1 < numv_per_simplex) { cout << ","; }
-    }
-    */
     for (int k = 0; k < num_vert_per_poly; k++) {
       cout << svert[k];
       if (k+1 < num_vert_per_poly) { cout << ","; }
@@ -2194,9 +2163,6 @@ void compute_bounding_box()
 /// Compute number of edges.
 int compute_num_edges()
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
   const int numv_per_simplex = num_vert_per_poly;
   const int nume_per_simplex = numv_per_simplex*(numv_per_simplex-1)/2;
   const int max_elist_length = 2*nume_per_simplex*num_simplices;
@@ -2237,14 +2203,14 @@ void compute_facet_info()
 
   compute_bounding_box();
   if (flag_simplex_file || mesh_dimension == 2) {
-    identify_nonmanifold_facets();
+    identify_nonmanifold_and_boundary_facets();
 
     const int num_vert_per_facet = mesh_dimension;
     mesh_info.num_nonmanifold_facets =
       (nonmanifold_facet_vert.size())/num_vert_per_facet;
   }
   else if (flag_cube_file) {
-    identify_nonmanifold_facets();
+    identify_nonmanifold_and_boundary_facets();
     mesh_info.num_nonmanifold_facets =
       (nonmanifold_facet_vert.size())/NUMV_PER_CUBE_FACET;
   }
@@ -2714,7 +2680,7 @@ void identify_nonmanifold()
       { mesh_info.num_nonmanifold_edges = identify_nonmanifold_edges(); }
     mesh_info.num_nonmanifold_vertices = identify_nonmanifold_vertices();
     mesh_info.num_deep_nonmanifold_vertices = 
-      count_deep_vertices(nonmanifold_vert);
+      count_deep_vertices(nonmanifold_vert_list);
   }
 }
 
@@ -2724,9 +2690,6 @@ bool simplex_equals(const int * simplex_vert, const int num_simplices,
 // return true if is0 equals is1
 // assumes simplex vertices are listed in sorted order
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
   const int numv_per_simplex = num_vert_per_poly;
 
   for (int k = 0; k < numv_per_simplex; k++) {
@@ -2827,7 +2790,7 @@ void set_in_nonmanifold_edge()
 // Identify non-manifold facets and boundary facets.
 // A facet is non-manifold if it is in more than two polytope.
 // A facet is boundary if it is in only one polytope.
-void identify_nonmanifold_facets()
+void identify_nonmanifold_and_boundary_facets()
 {
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
@@ -2842,7 +2805,7 @@ void identify_nonmanifold_facets()
   vector<bool> is_facet_nonmanifold;
   vector<bool> is_facet_boundary;
   int num_proper_facets = 0;
-  IJK::PROCEDURE_ERROR error("identify_nonmanifold_facets");
+  IJK::PROCEDURE_ERROR error("identify_nonmanifold_and_boundary_facets");
 
   if (mesh_dimension == 2) {
     num_facets = sum_num_poly_vert(polymesh);
@@ -2899,18 +2862,6 @@ void identify_nonmanifold_facets()
     throw error;
   }
 
-  // *** DEBUG ***
-  /*
-  using namespace std;
-  cerr << "Facets:" << endl;
-  for (int jf = 0; jf < num_proper_facets; jf++) {
-    IJK::print_list
-      (cerr, &(facet_vert_list[jf*numv_per_facet]), numv_per_facet);
-    cerr << endl;
-  }
-  */
-
-  
   if (mesh_dimension > 2) {
     // Sort vertices in each facet
     // If mesh_dimension == 2, edge endpoints are already sorted.
@@ -2920,13 +2871,14 @@ void identify_nonmanifold_facets()
     }
   }
 
-  int * index_sorted = new int[num_proper_facets];
+  vector<int> index_sorted(num_proper_facets);
+
   for (int i = 0; i < num_proper_facets; i++) 
     { index_sorted[i] = i; }
 
   TUPLE_LESS_THAN<int,int> facet_less_than
     (numv_per_facet, &(facet_vert_list.front()));
-  sort(index_sorted, index_sorted+num_proper_facets, facet_less_than);
+  sort(index_sorted.begin(), index_sorted.end(), facet_less_than);
 
   is_facet_nonmanifold.assign(num_proper_facets, false);
   contains_nonmanifold_facet.assign(num_poly, false);
@@ -2953,20 +2905,12 @@ void identify_nonmanifold_facets()
         { nonmanifold_facet_vert.push_back(facet_vert_list[iv]); };
 
       // set facets to non-manifold
-      for (int m = j; m < k; m++) {
+      for (int m = j; m <= k; m++) {
         int mf = index_sorted[m];
         is_facet_nonmanifold[mf] = true;
       };
     }
     else if (num_duplicate == 1) {
-
-      // *** DEBUG ***
-      /*
-      cerr << "Facet ";
-      IJK::print_list(cerr, &(facet_vert_list[jf*numv_per_facet]),
-                      numv_per_facet);
-      cerr << " is on boundary." << endl;
-      */
 
       // store boundary facet
       for (int iv = jf*numv_per_facet; iv < (jf+1)*numv_per_facet; iv++) {
@@ -3016,8 +2960,17 @@ void identify_nonmanifold_facets()
         }
       }
       else {
+        int num_facets_per_poly; 
+
+        if (flag_cube_file) {
+          num_facets_per_poly = NUM_FACETS_PER_CUBE;
+        }
+        else {
+          num_facets_per_poly = num_facets_per_simplex;
+        }
+
         // flag_simplex_input is true.
-        for (int k = 0; k < num_facets_per_simplex; k++) {
+        for (int k = 0; k < num_facets_per_poly; k++) {
           if (is_facet_nonmanifold[jf+k])
             contains_nonmanifold_facet[ipoly] = true;
           if (is_facet_boundary[jf+k])
@@ -3026,8 +2979,6 @@ void identify_nonmanifold_facets()
       }
     }
   }
-
-  delete [] index_sorted;
 
   set_in_nonmanifold_facet();
 }
@@ -3049,9 +3000,6 @@ int count_deep_vertices(const std::vector<int> & vlist)
 bool are_simplices_adjacent(int ks, int js)
 // return true if simplices ks and js share facet
 {
-  /* OBSOLETE
-  const int numv_per_simplex = mesh_dimension+1;
-  */
   const int numv_per_simplex = num_vert_per_poly;
   const int numv_per_facet = mesh_dimension;
   int jfacet_vert[numv_per_simplex];
@@ -3109,8 +3057,8 @@ bool are_poly2D_adjacent(int kpoly, int jpoly)
 }
 
 
-/// Return true if octahedra ioctA and ioctB share facet.
-bool are_octahedra_adjacent(int ioctA, int ioctB)
+/// Return true if hexahedra ihexA and ihexB share facet.
+bool are_hexahedra_adjacent(int ihexA, int ihexB)
 {
   const int DIM3(3);
   const int NUMV_PER_CUBE = 8;
@@ -3120,62 +3068,27 @@ bool are_octahedra_adjacent(int ioctA, int ioctB)
   int facetB_vert[NUMV_PER_CUBE_FACET];
   static CUBE_TYPE cube(DIM3);
 
-  // *** DEBUG ***
-  /*
-  using namespace std;
-  cerr << endl;
-  cerr << "Octahedra: " << ioctA << " " << ioctB << endl;
-  */
-
   for (int jfA = 0; jfA < NUM_CUBE_FACETS; jfA++) {
     
     for (int i = 0; i < NUMV_PER_CUBE_FACET; i++) {
       int iA = cube.FacetVertex(jfA, i);
-      facetA_vert[i] = polymesh.Vertex(ioctA, iA);
+      facetA_vert[i] = polymesh.Vertex(ihexA, iA);
     }
     sort(facetA_vert, facetA_vert+NUMV_PER_CUBE_FACET);
-
-    // *** DEBUG ***
-    /*
-    cerr << "Oct " << ioctA << "  facet: " << jfA << ": ";
-    IJK::print_list(cerr, facetA_vert, NUMV_PER_CUBE_FACET);
-    cerr << endl;
-    */
 
     for (int jfB = 0; jfB < NUM_CUBE_FACETS; jfB++) {
 
       for (int i = 0; i < NUMV_PER_CUBE_FACET; i++) {
         int iB = cube.FacetVertex(jfB, i);
-        facetB_vert[i] = polymesh.Vertex(ioctB, iB);
+        facetB_vert[i] = polymesh.Vertex(ihexB, iB);
       }
       sort(facetB_vert, facetB_vert+NUMV_PER_CUBE_FACET);
 
-      // *** DEBUG ***
-      /*
-      cerr << "Oct " << ioctB << "  facet: " << jfB << ": ";
-      IJK::print_list(cerr, facetB_vert, NUMV_PER_CUBE_FACET);
-      cerr << endl;
-      */
-
       if (equal(facetA_vert, facetA_vert+NUMV_PER_CUBE_FACET,
-                facetB_vert)) {
-
-        // *** DEBUG ***
-        /*
-        using namespace std;
-        cerr << "  Connected." << endl;
-        */
-
-        return(true); 
-      }
+                facetB_vert)) 
+        { return(true);  }
     }
   }
-
-  // *** DEBUG ***
-  /*
-  using namespace std;
-  cerr << "  Not connected." << endl;
-  */
 
   return(false);
 }
@@ -3194,7 +3107,7 @@ bool are_poly_adjacent(int kpoly, int jpoly)
     return(are_simplices_adjacent(kpoly, jpoly));
   }
   else if (num_vert_per_poly == NUMV_PER_CUBE) {
-    return(are_octahedra_adjacent(kpoly, jpoly));
+    return(are_hexahedra_adjacent(kpoly, jpoly));
   }
   else {
     error.AddMessage
@@ -3202,6 +3115,119 @@ bool are_poly_adjacent(int kpoly, int jpoly)
     error.AddMessage("Cannot determine if polytopes are adjacent.");
     throw error;
   }
+}
+
+bool are_edges_adjacent
+(const int je, const int ke, 
+ const std::vector<VERTEX_INDEX> & boundary_edge_endpoint)
+{
+  const int j = 2*je;
+  const int k = 2*ke;
+
+  if (boundary_edge_endpoint[j] == boundary_edge_endpoint[k])
+    { return(true); }
+  if (boundary_edge_endpoint[j+1] == boundary_edge_endpoint[k])
+    { return(true); }
+  if (boundary_edge_endpoint[j] == boundary_edge_endpoint[k+1])
+    { return(true); }
+  if (boundary_edge_endpoint[j+1] == boundary_edge_endpoint[k+1])
+    { return(true); }
+
+  return(false);
+}
+
+
+bool are_edges_connected
+(const std::vector<VERTEX_INDEX> & boundary_edge_endpoint)
+{
+  const int num_edges = boundary_edge_endpoint.size()/2;
+
+  if (num_edges == 0) { return(true); }
+
+  vector<bool> is_reachable(num_edges,false);
+  vector<int> reachable;
+  reachable.push_back(0);
+
+  while (reachable.size() > 0) {
+    int je = reachable.back();
+    reachable.pop_back();
+    is_reachable[je] = true;
+
+    for (int ke = 0; ke < num_edges; ke++) {
+      if (!is_reachable[ke]) {
+        if (are_edges_adjacent(je, ke, boundary_edge_endpoint)) 
+          { reachable.push_back(ke); }
+      }
+    }
+  }
+
+  for (int ke = 0; ke < num_edges; ke++) {
+    if (!is_reachable[ke]) 
+      { return(false); }
+  }
+
+  return(true);
+}
+
+void compute_boundary_edges
+(const POLYMESH_TYPE & polymesh, 
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+ const VERTEX_INDEX iv,
+ const CUBE_TYPE & cube,
+ std::vector<VERTEX_INDEX> & boundary_edge_endpoint)
+{
+  POLYMESH_TYPE link_mesh;
+
+  boundary_edge_endpoint.clear();
+
+  compute_vertex_link_in_cube_mesh
+    (polymesh, vertex_info, iv, cube, link_mesh);
+
+  // Convert quad vertices to cylic order around quadrilaterals.
+  reorder_quad_vertices(link_mesh.element);
+
+  const int num_edges = sum_num_poly_vert(link_mesh);
+  std::vector<int> edge_endpoint(2*num_edges);
+
+  int k = 0;
+  int num_edges2;
+  for (int ipoly = 0; ipoly < link_mesh.NumPoly(); ipoly++) {
+    store_polygon_edges(link_mesh, ipoly, k, num_edges2, edge_endpoint);
+  }
+
+  std::vector<int> index_sorted(num_edges);
+
+  for (int i = 0; i < num_edges; i++) 
+    { index_sorted[i] = i; }
+
+  TUPLE_LESS_THAN<int,int> edge_less_than(2, &(edge_endpoint.front()));
+  sort(index_sorted.begin(), index_sorted.end(), edge_less_than);
+
+  int j = 0;
+  while (j+1 < num_edges) {
+    int k = j+1;
+    int jf = index_sorted[j];
+    int kf = index_sorted[k];
+    while (k < num_edges && 
+           facet_equals(&(edge_endpoint.front()), 2, jf, kf)) {
+      k++;
+      kf = index_sorted[k];
+    };
+
+    int num_duplicate = k - j;
+
+    if (num_duplicate == 1) {
+
+      // store boundary edge
+      for (int iv = jf*2; iv < (jf+1)*2; iv++) {
+        int iv2 = edge_endpoint[iv];
+        boundary_edge_endpoint.push_back(iv2);
+      }
+    }
+
+    j = k;
+  }
+
 }
 
 
@@ -3232,11 +3258,12 @@ int identify_nonmanifold_vertices()
     }
   }
 
-  nonmanifold_vert.clear();
+  nonmanifold_vert_list.clear();
+  nonmanifold_vert.assign(num_vertices, false);
 
-  VERTEX_POLY_INCIDENCE<int,int> vertex_info(polymesh);
+  VERTEX_POLY_INCIDENCE_TYPE vertex_info(polymesh);
 
-  for (int iv = 0; iv < vertex_info.NumVertices(); iv++) {
+  for (VERTEX_INDEX iv = 0; iv < vertex_info.NumVertices(); iv++) {
     const int num_incident = vertex_info.NumIncidentPoly(iv);
     if (!in_nonmanifold_facet[iv] && num_incident > 0) {
 
@@ -3267,7 +3294,8 @@ int identify_nonmanifold_vertices()
 
       for (int k = 0; k < num_incident; k++) {
         if (!is_reachable[k]) {
-          nonmanifold_vert.push_back(iv);
+          nonmanifold_vert_list.push_back(iv);
+          nonmanifold_vert[iv] = true;
           break;
         }
 
@@ -3275,14 +3303,39 @@ int identify_nonmanifold_vertices()
     }
   }
 
-  return(nonmanifold_vert.size());
+
+  if (flag_cube_file && mesh_dimension == DIM3) {
+
+    CUBE_TYPE cube(mesh_dimension);
+
+    // Check that the boundary of each link is connected.
+    for (VERTEX_INDEX iv = 0; iv < vertex_info.NumVertices(); iv++) {
+
+      if (nonmanifold_vert[iv] || in_nonmanifold_facet[iv] ||
+          in_nonmanifold_edge[iv])
+        { continue; }
+
+      vector<int> boundary_edge_endpoint;
+
+      compute_boundary_edges
+        (polymesh, vertex_info, iv, cube, boundary_edge_endpoint);
+
+      if (!are_edges_connected(boundary_edge_endpoint)) {
+        nonmanifold_vert_list.push_back(iv);
+        nonmanifold_vert[iv] = true;
+      }
+    }
+
+  }
+
+  return(nonmanifold_vert_list.size());
 }
 
 
 /// Identify non-manifold vertices in mesh of 2D polygons.
 void identify_nonmanifold_vertices_in_dim2_mesh()
 {
-  nonmanifold_vert.clear();
+  nonmanifold_vert_list.clear();
 
   // initialize in_nonmanifold_facet[iv] to false for all vertices iv
   in_nonmanifold_facet.assign(num_vertices, false);
@@ -3321,7 +3374,7 @@ void identify_nonmanifold_vertices_in_dim2_mesh()
 
       for (int k = 0; k < num_incident; k++) {
         if (!is_reachable[k]) {
-          nonmanifold_vert.push_back(iv);
+          nonmanifold_vert_list.push_back(iv);
           break;
         }
 
@@ -3343,8 +3396,8 @@ int identify_nonmanifold_edges()
   IJK::PROCEDURE_ERROR error("identify_nonmanifold_edges");
 
   if (num_vert_per_poly != NUMV_PER_CUBE) {
-      ("Programming error.  Mesh is not a mesh of octahedra.");
-    error.AddMessage("  Non-manifold edges only implemented for mesh of octahedra.");
+      ("Programming error.  Mesh is not a mesh of hexahedra.");
+    error.AddMessage("  Non-manifold edges only implemented for mesh of hexahedra.");
     throw error;
   }
 
