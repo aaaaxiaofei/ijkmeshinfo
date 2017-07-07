@@ -1142,8 +1142,6 @@ void output_nonmanifold_facets()
   const char * poly_str = "Polytopes";
   const char * facet_str = "facets";
   int numv_per_facet = mesh_dimension;
-  const int num_nonmanifold_facets = 
-    nonmanifold_facet_vert.size()/numv_per_facet;
 
   if (mesh_dimension == 2 || flag_simplex_file) 
     { numv_per_facet = mesh_dimension;  }
@@ -1154,6 +1152,9 @@ void output_nonmanifold_facets()
     poly_str = "Polygons";
     facet_str = "edges"; 
   }
+
+  int num_nonmanifold_facets = 
+    nonmanifold_facet_vert.size()/numv_per_facet;
 
   cout << "Non-manifold " << facet_str << ":" << endl;
 
