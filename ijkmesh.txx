@@ -930,6 +930,53 @@ namespace IJK {
     }
   }
 
+  /// Reverse cube orientation.
+  /// @param cube_vertex[] Array of cube vertices.
+  /// @param num_cube_facet_vert Number of vertices per cube facet
+  template <typename VTYPE, typename NTYPE>
+  void reverse_cube_orientation
+  (VTYPE * cube_vertex, const NTYPE num_vert_per_cube_facet)
+  {
+    // Swap left and right facet vertices to reverse cube orientation.
+    for (NTYPE i = 0; i < num_vert_per_cube_facet; i++) {
+      std::swap(cube_vertex[i], cube_vertex[i+num_vert_per_cube_facet]);
+    }
+  }
+
+  /// Reverse orientations of cubes in list.
+  /// @param cube_vertex[] Array of cube vertices.
+  /// @param num_cubes Number of cubes.
+  /// @param num_cube_facet_vert Number of vertices per cube facet
+  template <typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void reverse_orientations_cube_list
+  (VTYPE * cube_vertex, 
+   const NTYPE0 num_cubes, const NTYPE1 num_vert_per_cube_facet)
+  {
+    const NTYPE1 num_vert_per_cube = 2*num_vert_per_cube_facet;
+
+    for (NTYPE0 i = 0; i < num_cubes; i++) {
+      reverse_cube_orientation
+        (cube_vertex+i*num_vert_per_cube, num_vert_per_cube_facet);
+    }
+  }
+
+  /// Reverse orientations of cubes in list.
+  /// C++ STL vector format for cube_vertex[].
+  template <typename VTYPE, typename NTYPE>
+  void reverse_orientations_cube_list
+  (std::vector<VTYPE> & cube_vertex, const NTYPE num_vert_per_cube_facet)
+  {
+    typedef typename std::vector<VTYPE>::size_type SIZE_TYPE;
+
+    const NTYPE num_vert_per_cube = 2*num_vert_per_cube_facet;
+    const SIZE_TYPE num_cubes = cube_vertex.size()/num_vert_per_cube;
+
+    if (num_cubes > 0) {
+      reverse_orientations_cube_list
+        (&(cube_vertex.front()), num_cubes, num_vert_per_cube_facet);
+    }
+  }
+
   ///@}
 
 

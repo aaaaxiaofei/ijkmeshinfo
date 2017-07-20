@@ -1,12 +1,13 @@
 /// \file ijkIO.txx
 /// IO templates for reading/writing meshes.
 /// - Input formats: Geomview .off.
-/// - Output formats: Geomview .off, OpenInventor .iv (3D), Fig .fig (2D).
-/// - Version 0.1.3
+/// - Output formats: Geomview .off, OpenInventor .iv (3D), Fig .fig (2D)
+///   and Stanford .ply.
+/// - Version 0.1.4
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2011-2016 Rephael Wenger
+  Copyright (C) 2011-2017 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -176,7 +177,7 @@ namespace IJK {
   }
 
   /// Output OpenInventor .iv file.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutIV
   (std::ostream & out, const int dim, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE> & simplex_vert)
@@ -186,7 +187,7 @@ namespace IJK {
   }
 
   /// Output OpenInventor .iv file to standard output.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutIV
   (const int dim, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE> & simplex_vert)
@@ -263,7 +264,7 @@ namespace IJK {
 
 
   /// Output Geomview .off file.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,
    const std::vector<CTYPE> & coord,
@@ -278,7 +279,7 @@ namespace IJK {
 
   /// Output Geomview .off file.
   /// Every simplex has \a dim vertices.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutOFF
   (std::ostream & out, const int dim, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE> & simplex_vert)
@@ -292,7 +293,7 @@ namespace IJK {
 
 
   /// Output Geomview .off file to standard output.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutOFF
   (const int dim, const int numv_per_simplex, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE> & simplex_vert)
@@ -302,7 +303,7 @@ namespace IJK {
 
   /// Output Geomview .off file to standard output.
   /// Every simplex has \a dim vertices.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutOFF
   (const int dim, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE> & simplex_vert)
@@ -393,8 +394,8 @@ namespace IJK {
   }
 
   /// Output Geomview .off file.
-  /// Different polytopes may have different numbers of vertices.
-  /// C++ STL vector format for coord[], num_poly_vert, poly_vert,
+  /// - Different polytopes may have different numbers of vertices.
+  /// - C++ STL vector format for coord[], num_poly_vert, poly_vert,
   ///   and first_poly_vert.
   template <typename CTYPE, typename NTYPE, typename VTYPE, typename ITYPE> 
   void ijkoutPolytopeOFF
@@ -463,9 +464,9 @@ namespace IJK {
   }
 
   /// Output Geomview .off file.
-  /// Different polytopes may have different numbers of vertices.
-  /// Color Vertices.
-  /// C++ STL vector format for num_poly_vert, poly_vert, first_poly_vert,
+  /// - Different polytopes may have different numbers of vertices.
+  /// - Color Vertices.
+  /// - C++ STL vector format for num_poly_vert, poly_vert, first_poly_vert,
   ///        front_color[] and back_color[].
   template <typename CTYPE, typename NTYPE, typename VTYPE, typename ITYPE,
             typename COLOR_TYPE> 
@@ -532,7 +533,7 @@ namespace IJK {
   }
 
   /// Output Geomview .off file. Color vertices.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE, typename COLOR_TYPE> 
   void ijkoutColorVertOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,   
@@ -547,7 +548,7 @@ namespace IJK {
   }
 
   /// Output Geomview .off file. Color vertices.
-  /// C++ STL vector format for front_color[] and back_color[].
+  /// - C++ STL vector format for front_color[] and back_color[].
   template <typename T, typename COLOR_TYPE> void ijkoutColorVertOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,   
    const T * coord, const int numv,
@@ -664,9 +665,9 @@ namespace IJK {
   }
 
   /// Output Geomview .off file.
-  /// Different polytopes may have different numbers of vertices.
-  /// Color faces.
-  /// C++ STL vector format for num_poly_vert, poly_vert, first_poly_vert,
+  /// - Different polytopes may have different numbers of vertices.
+  /// - Color faces.
+  /// - C++ STL vector format for num_poly_vert, poly_vert, first_poly_vert,
   ///        front_color[] and back_color[].
   template <typename CTYPE, typename NTYPE, typename VTYPE, typename ITYPE,
             typename COLOR_TYPE> 
@@ -793,7 +794,7 @@ namespace IJK {
   }
 
   /// Output Geomview .off file. Color simplices.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE, typename COLOR_TYPE> 
   void ijkoutColorFacesOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,   
@@ -808,7 +809,7 @@ namespace IJK {
   }
 
   /// Output Geomview .off file. Color simplices.
-  /// C++ STL vector format for front_color[] and back_color[].
+  /// - C++ STL vector format for front_color[] and back_color[].
   template <typename T, typename COLOR_TYPE> void ijkoutColorFacesOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,
    const T * coord, const int numv,
@@ -893,7 +894,7 @@ namespace IJK {
   }
 
   /// Output Geomview .off file. Output vertex normals.
-  /// C++ STL vector format for coord[], normal[] and simplex_vert[].
+  /// - C++ STL vector format for coord[], normal[] and simplex_vert[].
   template <typename CTYPE, typename NTYPE, typename VTYPE> 
   void ijkoutNormalsOFF
   (std::ostream & out, const int dim, const int numv_per_simplex,
@@ -953,7 +954,7 @@ namespace IJK {
   }
 
   /// Output quadrilaterals to Geomview .off
-  /// C++ STL vector format for coord[] and quad_vert[].
+  /// - C++ STL vector format for coord[] and quad_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutQuadOFF
   (std::ostream & out, const int dim,
    const std::vector<CTYPE> & coord, const std::vector<VTYPE> & quad_vert,
@@ -967,7 +968,7 @@ namespace IJK {
   }
 
   /// Output quadrilaterals in Geomview .off format to standard output.
-  /// C++ STL vector format for coord[] and quad_vert[].
+  /// - C++ STL vector format for coord[] and quad_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutQuadOFF
   (const int dim,
    const std::vector<CTYPE> & coord, const std::vector<VTYPE> & quad_vert,
@@ -1015,7 +1016,7 @@ namespace IJK {
   }
 
   /// Output Geomview .line file.
-  /// C++ STL vector format for coord[] and edge_vert[].
+  /// - C++ STL vector format for coord[] and edge_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutLINE
   (std::ostream & out, const int dim,
    const std::vector<CTYPE> & coord, const std::vector<VTYPE> & edge_vert)
@@ -1095,7 +1096,7 @@ namespace IJK {
   }
 
   /// Output Geomview .line file.
-  /// C++ STL vector format for coord[] and edge_vert[].
+  /// - C++ STL vector format for coord[] and edge_vert[].
   template <typename CTYPE, typename VTYPE, typename COLOR_TYPE> 
   void ijkoutColorLINE
   (std::ostream & out, const int dim,
@@ -1149,7 +1150,7 @@ namespace IJK {
   /// Output vectors to Geomview .line file.
   /// @param num_vectors Number of vectors
   /// @param scale Multiply all vectors by scale.
-  /// C++ STL vector format for point_coord[] and dir_coord[].
+  /// - C++ STL vector format for point_coord[] and dir_coord[].
   template <typename CTYPE0, typename CTYPE1, typename CTYPE2, 
             typename COLOR_TYPE> 
   void ijkoutVectorsLINE
@@ -1449,7 +1450,7 @@ namespace IJK {
   }
 
   /// \brief Read simplex vertices of polytope \a jpoly from Geomview .off file.
-  /// C++ STL vector format for poly_vert[].
+  /// - C++ STL vector format for poly_vert[].
   /// @pre C++ vector poly_vert[] has size at least 
   ///        \a numv_per_poly * \a (jpoly+1).
   template <typename T> void ijkinOFFpolyVert
@@ -1502,7 +1503,7 @@ namespace IJK {
 
   /// \brief Read \a nums simplex vertices starting at simplex \a ifirst
   ///        from Geomview .off file.
-  /// C++ STL vector format for simplex_vert[].
+  /// - C++ STL vector format for simplex_vert[].
   /// @pre C++ vector simplex_vert[] has been preallocated
   ///      with size at least \a numv_per_simplex * \a (js+1).
   template <typename T> void ijkinOFFsimplex
@@ -1563,7 +1564,7 @@ namespace IJK {
   }
 
   /// \brief Read Geomview .off file.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename T> void ijkinOFF
   (std::istream & in, int & dim, int & mesh_dim,
    std::vector<T> & coord, std::vector<int> & simplex_vert)
@@ -1664,8 +1665,8 @@ namespace IJK {
   }
 
   /// \brief Read Geomview .off file.
-  /// Read normal information from files with NOFF header.
-  /// C++ STL vector format for coord[], normal[], and simplex_vert[].
+  /// - Read normal information from files with NOFF header.
+  /// - C++ STL vector format for coord[], normal[], and simplex_vert[].
   template <typename CTYPE, typename NTYPE> void ijkinOFF
   (std::istream & in, int & dim, int & mesh_dim,
    std::vector<CTYPE> & coord, std::vector<NTYPE> & normal, 
@@ -1909,9 +1910,8 @@ namespace IJK {
   }
 
   /// \brief Read polytopes from Geomview .off file.
-  /// C++ STL vector format for coord[].
-  ///
-  /// Ignores any color, normal information.
+  /// - C++ STL vector format for coord[].
+  /// - Ignores any color, normal information.
   /// @param in = Input stream.
   /// @param dim = Dimension of vertices.
   /// @param coord = Array of coordinates. 
@@ -2128,7 +2128,7 @@ namespace IJK {
 
 
   /// Output .ply file.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutPLY
   (std::ostream & out, const int dim, const int numv_per_simplex,
    const std::vector<CTYPE> & coord,
@@ -2152,7 +2152,7 @@ namespace IJK {
 
 
   /// Output .ply file to standard output.
-  /// C++ STL vector format for coord[] and simplex_vert[].
+  /// - C++ STL vector format for coord[] and simplex_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutPLY
   (const int dim, const int numv_per_simplex,
    const std::vector<CTYPE> & coord,
@@ -2194,7 +2194,7 @@ namespace IJK {
   }
 
   /// Output quadrilaterals to .ply file
-  /// C++ STL vector format for coord[] and quad_vert[].
+  /// - C++ STL vector format for coord[] and quad_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutQuadPLY
   (std::ostream & out, const int dim,
    const std::vector<CTYPE> & coord, const std::vector<VTYPE> & quad_vert,
@@ -2240,7 +2240,7 @@ namespace IJK {
   }
 
   /// Output .ply file.
-  /// C++ STL vector format for coord[], poly1_vlist[] and poly2_vlist[].
+  /// - C++ STL vector format for coord[], poly1_vlist[] and poly2_vlist[].
   template <typename CTYPE, typename VTYPE1, typename VTYPE2> void ijkoutPLY
   (std::ostream & out, const int dim, const std::vector<CTYPE> & coord,
    const std::vector<VTYPE1> & poly1_vlist, const int numv_per_poly1,
@@ -2373,8 +2373,8 @@ namespace IJK {
   }
 
   /// Output .ply file with colored faces.
-  /// Two types of polytopes.
-  /// C++ STL vector format for coord[], poly1_vlist[], poly2_vlist[]
+  /// - Two types of polytopes.
+  /// - C++ STL vector format for coord[], poly1_vlist[], poly2_vlist[]
   ///     poly1_color[] and poly2_color[].
   template <typename CTYPE, typename VTYPE1, typename VTYPE2>
   void ijkoutColorFacesPLY
@@ -2398,7 +2398,7 @@ namespace IJK {
 
 
   /// Output .ply file with colored faces.
-  /// Version where polygons may have different numbers of vertices.
+  /// - Version where polygons may have different numbers of vertices.
   /// @param out = Output stream.
   /// @param dim = Dimension of vertices.
   /// @param coord = Array of coordinates. 
@@ -2489,7 +2489,7 @@ namespace IJK {
   }
 
   /// Output .ply edge file.
-  /// C++ STL vector format for coord[] and edge_vert[].
+  /// - C++ STL vector format for coord[] and edge_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutEdgePLY
   (std::ostream & out, const int dim,
    const std::vector<CTYPE> & coord, const std::vector<VTYPE> & edge_vert)
@@ -2520,6 +2520,144 @@ namespace IJK {
        vector2pointer(edge_vert), edge_vert.size()/NUM_EDGE_ENDPOINTS);
   }
 
+
+  // ******************************************
+  // Write .vtk file
+  // ******************************************
+
+  /// Output ASCII .vtk file header for unstructured grid.
+  /// @param out = Output stream.
+  /// @param dim = Dimension of vertices.
+  inline void ijkoutVTKheader
+  (std::ostream & out, const char * dataset_name, const int dim)
+  {
+    IJK::PROCEDURE_ERROR error("ijkoutVTKheader");
+
+    if (dim != 3) {
+      error.AddMessage
+        ("Programming error.  Only dimension 3 available for .vtk files.");
+      throw error;
+    }
+
+    using std::endl;
+
+    out << "# vtk DataFile Version 4.1" << endl;
+    out << dataset_name << endl;
+    out << "ASCII" << endl;
+  }
+
+  /// Output cell types.
+  inline void ijkoutCellTypesVTK
+  (std::ostream & out, const int num_cells, const int itype)
+  {
+    using std::endl;
+
+    out << "CELL_TYPES " << num_cells << endl;
+    for (int i = 0; i < num_cells; i++) {
+      out << itype << endl;
+    }
+  }
+
+  /// Output cell types.
+  inline void ijkoutHexahedralTypesVTK
+  (std::ostream & out, const int num_hex)
+  {
+    const int HEXAHEDRAL_TYPE(12);
+
+    ijkoutCellTypesVTK(out, num_hex, HEXAHEDRAL_TYPE);
+  }
+
+  /// Output hex vertices, reordering in VTK order.
+  template <typename VTYPE, typename NTYPE> void ijkoutHexahedraVerticesVTK
+  (std::ostream & out, const VTYPE * hex_vert, const NTYPE numh)
+  {
+    const NTYPE NUM_VERT_PER_HEXAHEDRON(8);
+    using std::endl;
+
+    for (NTYPE i = 0; i < numh; i++) {
+      const VTYPE * hex_i_vert = hex_vert + i*NUM_VERT_PER_HEXAHEDRON;
+
+      out << NUM_VERT_PER_HEXAHEDRON;
+      out << " " << hex_i_vert[0];
+      out << " " << hex_i_vert[1];
+      out << " " << hex_i_vert[3];
+      out << " " << hex_i_vert[2];
+      out << " " << hex_i_vert[4];
+      out << " " << hex_i_vert[5];
+      out << " " << hex_i_vert[7];
+      out << " " << hex_i_vert[6];
+      out << endl;
+    }
+
+  }
+
+  /// Output hexahedra.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutHexahedraVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices)
+  {
+    const int NUM_VERT_PER_HEXAHEDRON(8);
+    IJK::PROCEDURE_ERROR error("ijkoutHexahedraVTK");
+
+    if (dim != 3) {
+      error.AddMessage
+        ("Programming error.  Only dimension 3 available for .vtk files.");
+      throw error;
+    }
+
+    using std::endl;
+
+    ijkoutVTKheader(out, dataset_name, dim);
+
+    out << "DATASET UNSTRUCTURED_GRID" << endl;
+    out << endl;
+
+    out << "POINTS " << numv << " float" << endl;
+    ijkoutVertexCoord(out, dim, coord, numv);
+    out << endl;
+
+    out << "CELLS " << numh << " " 
+        << numh*(1+NUM_VERT_PER_HEXAHEDRON) << endl;
+
+    if (flag_reorder_hex_vertices) {
+      ijkoutHexahedraVerticesVTK(out, hexahedra_vert, numh);
+    }
+    else {
+      ijkoutPolygonVertices
+        (out, NUM_VERT_PER_HEXAHEDRON, hexahedra_vert, numh);
+    }
+    out << endl;
+
+    ijkoutHexahedralTypesVTK(out, numh);
+  }
+
+  /// Output hexahedra.
+  /// - C++ STL vector format for coord[] and hexahedra_vert[].
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE>
+  void ijkoutHexahedraVTK
+  (std::ostream & out, const char * dataset_name, const int dim,
+   const std::vector<CTYPE> & coord, 
+   const std::vector<VTYPE> & hexahedra_vert,
+   const bool flag_reorder_hex_vertices)
+  {
+    typedef typename std::vector<CTYPE>::size_type SIZEC_TYPE;
+    typedef typename std::vector<VTYPE>::size_type SIZEV_TYPE;
+
+    const SIZEV_TYPE NUM_VERT_PER_HEXAHEDRON(8);
+    const SIZEC_TYPE numc = coord.size()/dim;
+    const SIZEV_TYPE num_hex = hexahedra_vert.size()/NUM_VERT_PER_HEXAHEDRON;
+
+    ijkoutHexahedraVTK
+      (out, dataset_name, dim, vector2pointer(coord), numc,
+       vector2pointer(hexahedra_vert), num_hex, flag_reorder_hex_vertices);
+  }
 
 
   // ******************************************
@@ -2957,8 +3095,8 @@ namespace IJK {
 
 
     /// Output polygon vertices and polygon rgb.
-    /// Version where polygons may have different numbers of vertices.
-    /// Single rgb per polygon.
+    /// - Version where polygons may have different numbers of vertices.
+    /// - Single rgb per polygon.
     /// @param out Output stream.
     /// @param numv_per_polygon Number of vertices per polygon.
     /// @pre     All polygons have the same number of vertices.

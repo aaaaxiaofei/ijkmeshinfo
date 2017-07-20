@@ -175,6 +175,7 @@ namespace IJK {
 
   }
 
+
   // **************************************************
   // QUERY LIST
   // **************************************************
@@ -269,6 +270,21 @@ namespace IJK {
     return(el);
   }
 
+
+  // **************************************************
+  // ADD LIST
+  // **************************************************
+
+  /// Add list to a C++ STL vector.
+  template <typename T1, typename T2, typename NTYPE>
+  void add_list(const T1 * list, const NTYPE list_length,
+                std::vector<T2> & v)
+  {
+    for (NTYPE i = 0; i < list_length; i++)
+      { v.push_back(list[i]); }
+  }
+                
+
   // **************************************************
   // Class LIST_OF_LISTS
   // **************************************************
@@ -296,7 +312,8 @@ namespace IJK {
     // constructor
     LIST_OF_LISTS(){}
 
-    NTYPE NumLists() const               ///< Number of lists.
+    /// Number of lists.
+    NTYPE NumLists() const
     { return(list_length.size()); }
 
     /// Number of elements of list i.
@@ -326,6 +343,11 @@ namespace IJK {
     {
       return(does_list_contain(List(ilist), ListLength(ilist), el));
     }
+
+    /// Return true if ilistA equals ilistB.
+    /// - Lists are equal only if lists have same length and ilistA[k] = ilistB[k]
+    ///   for every k.
+    bool AreListsEqual(const NTYPE ilistA, const NTYPE ilistB) const;
 
     /// Count number of distinct elements in list ilist.
     /// @pre List ilist is sorted.
@@ -447,6 +469,19 @@ namespace IJK {
   // **************************************************
   // Member functions for class LIST_OF_LISTS
   // **************************************************
+
+  template <typename ETYPE, typename NTYPE>
+  bool LIST_OF_LISTS<ETYPE,NTYPE>::
+  AreListsEqual(const NTYPE ilistA, const NTYPE ilistB) const
+  {
+    if (ListLength(ilistA) != ListLength(ilistB)) { return(false); }
+    for (NTYPE j = 0; j < ListLength(ilistA); j++) {
+      if (Element(ilistA,j) != Element(ilistB,j)) 
+        { return(false); }
+    }
+
+    return(true);
+  }
 
   template <typename ETYPE, typename NTYPE>
   NTYPE LIST_OF_LISTS<ETYPE,NTYPE>::

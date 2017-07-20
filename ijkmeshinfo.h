@@ -69,6 +69,10 @@ namespace IJKMESHINFO {
     int num_nonmanifold_edges;
     int num_nonmanifold_vertices;
     int num_deep_nonmanifold_vertices;
+    int num_poly_with_orientation_conflicts;
+
+    /// Return true if all non-manifold numbers are zero.
+    bool AreAllNonManifoldZero() const;
 
     /// Return true if all numbers are zero.
     bool AreAllZero() const;
@@ -99,6 +103,25 @@ namespace IJKMESHINFO {
     int AdjacentSimplex(const int iv, const int k)
     { return(adjacent[numv_per_simplex*iv + k]); };
   };
+
+
+// **************************************************
+// Class FACET_INFO
+// **************************************************
+
+  class FACET_INFO {
+  public:
+    int poly_containing_facet;
+    int facet_index;
+
+  public:
+    FACET_INFO() {};
+    FACET_INFO(const int ipoly, const int jf)
+    { poly_containing_facet = ipoly, facet_index = jf; }
+  };
+
+  typedef std::vector<FACET_INFO> FACET_INFO_ARRAY;
+
 
 // **************************************************
 // Class GRID_OF_BINS_3D

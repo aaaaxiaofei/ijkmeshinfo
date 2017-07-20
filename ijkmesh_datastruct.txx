@@ -55,7 +55,8 @@ namespace IJK {
     /// constructor
     POLYMESH(){}
 
-    NTYPE NumPoly() const               ///< Number of polytopes.
+    /// Number of polytopes.
+    NTYPE NumPoly() const               
     { return(this->NumLists()); }
 
     /// Number of vertices of polytope i.
@@ -80,6 +81,12 @@ namespace IJK {
     template <typename VTYPE0, typename VTYPE1>
     bool DoesPoly2DContainEdge
     (const NTYPE ipoly, const VTYPE0 iv0, const VTYPE1 iv1) const;
+
+    /// Return true if ipolyA equals ipolyB.
+    /// - Polytopes are only equal if vertices are listed 
+    ///   in the same order in each polytope.
+    bool ArePolytopesEqual(const NTYPE ipolyA, const NTYPE ipolyB) const
+    { return(this->AreListsEqual(ipolyA, ipolyB)); }
 
     /// Add a polytope with list_length vertices.
     template <typename VTYPE2, typename NTYPE2>
