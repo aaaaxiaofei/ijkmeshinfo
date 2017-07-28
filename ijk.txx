@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2008-2016 Rephael Wenger
+  Copyright (C) 2008-2017 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -268,6 +268,42 @@ namespace IJK {
     ETYPE * End() { return(this->element+length); };
   };
 
+
+  // ********************************************************
+  // TEMPLATE CLASS SET_VALUE
+  // ********************************************************
+
+  template <typename T>
+  class SET_VALUE {
+
+  protected:
+    T v;
+    bool is_set;
+
+    void Init() 
+    { is_set = false; }
+
+    void Init(const T value)
+    {
+      v = value;
+      is_set = false;
+    }
+
+  public:
+    SET_VALUE(){ Init(); };
+    SET_VALUE(const T value) { Init(value); };
+
+    void Set(const T value)
+    {
+      v = value;
+      is_set = true;
+    }
+
+    bool IsSet() const { return(is_set); };
+    T Value() const { return(v); };
+  };
+
+
   // **************************************************
   // TEMPLATE CLASS CONSTANT
   // **************************************************
@@ -285,6 +321,7 @@ namespace IJK {
     CTYPE operator [] (const ITYPE i) const { return(c); };
     CTYPE operator () (const ITYPE i) const { return(c); };
   };
+
 
   // **************************************************
   // CONVERT A C++ VECTOR TO A POINTER

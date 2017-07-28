@@ -21,7 +21,8 @@ LINK_DIRECTORIES("${IJK_DIR}/lib")
 
 SET(CMAKE_CXX_FLAGS "-std=c++11")
 
-ADD_EXECUTABLE(ijkmeshinfo ijkmeshinfo.cxx)
+ADD_EXECUTABLE(ijkmeshinfo ijkmeshinfo.cxx ijkmeshinfo_compute.cxx
+                           ijkmeshinfoIO.cxx)
 
 SET(CMAKE_INSTALL_PREFIX ${IJK_DIR})
 INSTALL(TARGETS ijkmeshinfo DESTINATION "bin/linux")

@@ -1,6 +1,6 @@
 /// \file ijkmesh_datastruct.txx
 /// ijk template classes for polyhedral mesh data structures.
-/// Version 0.2.0
+/// Version 0.2.1
 
 /*
   IJK: Isosurface Jeneration Kode
@@ -39,7 +39,7 @@ namespace IJK {
   // Class POLYMESH 
   // **************************************************
 
-  /// Mesh of polytopes
+  /// Mesh of polytopes.
   template <typename VTYPE, typename NTYPE>
   class POLYMESH:public LIST_OF_LISTS<VTYPE,NTYPE> {
 
@@ -53,7 +53,7 @@ namespace IJK {
 
   public:
     /// constructor
-    POLYMESH(){}
+    POLYMESH(){};
 
     /// Number of polytopes.
     NTYPE NumPoly() const               
@@ -75,6 +75,13 @@ namespace IJK {
     template <typename VTYPE2>
     bool DoesPolyContainVertex(const NTYPE ipoly, const VTYPE2 iv) const
     { return(this->DoesListContain(ipoly, iv)); }
+
+    /// Return true if polytope ipoly contains vertex iv.
+    /// - Version which returns location of vertex iv in list.
+    template <typename VTYPE2, typename ITYPE>
+    bool DoesPolyContainVertex
+    (const NTYPE ipoly, const VTYPE2 iv, ITYPE & iloc) const
+    { return(this->DoesListContain(ipoly, iv, iloc)); }
 
     /// Return true if 2D polygon ipoly contains edge (iv0,iv1).
     /// @pre Polygon vertices are listed in cylic order around the polygon.
@@ -131,6 +138,66 @@ namespace IJK {
     void GetSortedPolytopeIndices(std::vector<NTYPE2> & sorted_poly) const
     { this->GetSortedListIndices(sorted_poly); }
 
+  };
+
+
+  // **************************************************
+  // Class POLYMESH_DATA
+  // **************************************************
+
+  /// Mesh of polytopes with data for each polytope.
+  template <typename VTYPE, typename NTYPE, typename POLYDATA_TYPE>
+  class POLYMESH_DATA:public POLYMESH<VTYPE,NTYPE> {
+
+  protected:
+    void ResizePolyData(const NTYPE k)
+    { const NTYPE num_poly = this->NumPoly(); poly_data.resize(num_poly+k); }
+
+  public:
+    std::vector<POLYDATA_TYPE> poly_data;
+
+  public:
+
+    /// constructor
+    POLYMESH_DATA(){};
+
+    /// Add a polytope with list_length vertices.
+    template <typename VTYPE2, typename NTYPE2>
+    void AddPolytope(const VTYPE2 poly_vert_list[],
+                     const NTYPE2 list_length)
+    { ResizePolyData(1); 
+      POLYMESH<VTYPE,NTYPE>::AddPolytope(poly_vert_list, list_length); }
+
+    /// Add a polytope.
+    /// - C++ STL vector type for array poly_vert_list[].
+    /// @param poly_vert_list List of polytope vertices in C++ STL vector.
+    template <typename VTYPE2>
+    void AddPolytope(const std::vector<VTYPE2> & poly_vert_list)
+    { ResizePolyData(1); 
+      POLYMESH<VTYPE,NTYPE>::AddPolytope(poly_vert_list); }
+
+    /// Add polytopes from list where each polytope has 
+    ///   num_vert_per_poly vertices.
+    /// @param num_vert Total number of vertices in poly_vert_list[].
+    /// @param num_vert_per_poly Number of vertices in each polytope.
+    template <typename VTYPE2, typename NTYPE1, typename NTYPE2>
+    void AddPolytopes(const VTYPE2 poly_vert_list[],
+                      const NTYPE1 num_vert,
+                      const NTYPE2 num_vert_per_poly);
+
+    /// Add polytopes from list where each polytope has 
+    ///   num_vert_per_poly vertices.
+    /// @param num_vert_per_poly Number of vertices in each polytope.
+    template <typename VTYPE2>
+    void AddPolytopes(const std::vector<VTYPE2> & poly_vert_list, 
+                      const NTYPE num_vert_per_poly);
+
+
+    // Check functions.
+
+    /// Check data structure.
+    /// - Return true if data structure passes check.
+    bool Check(IJK::ERROR & error);
   };
 
 
@@ -532,6 +599,58 @@ namespace IJK {
     }
 
     return(false);
+  }
+
+
+  // **************************************************
+  // Class POLYMESH_DATA member functions
+  // **************************************************
+
+  template <typename VTYPE, typename NTYPE, typename POLY_DATA>
+  template <typename VTYPE2, typename NTYPE1, typename NTYPE2>
+  void POLYMESH_DATA<VTYPE,NTYPE,POLY_DATA>::
+  AddPolytopes(const VTYPE2 poly_vert_list[],
+               const NTYPE1 num_vert,
+               const NTYPE2 num_vert_per_poly)
+  {
+    const NTYPE1 num_added_poly = num_vert/num_vert_per_poly;
+
+    ResizePolyData(num_added_poly);
+    POLYMESH<VTYPE,NTYPE>::AddPolytopes
+      (poly_vert_list, num_vert, num_vert_per_poly);
+  }
+
+
+  template <typename VTYPE, typename NTYPE, typename POLY_DATA>
+  template <typename VTYPE2>
+  void POLYMESH_DATA<VTYPE,NTYPE,POLY_DATA>::
+  AddPolytopes(const std::vector<VTYPE2> & poly_vert_list, 
+                    const NTYPE num_vert_per_poly)
+  {
+    const NTYPE num_added_poly = poly_vert_list.size()/num_vert_per_poly;
+
+    ResizePolyData(num_added_poly);
+    POLYMESH<VTYPE,NTYPE>::AddPolytopes(poly_vert_list, num_vert_per_poly);
+  }
+
+
+  template <typename VTYPE, typename NTYPE, typename POLY_DATA>
+  bool POLYMESH_DATA<VTYPE,NTYPE,POLY_DATA>::
+  Check(IJK::ERROR & error)
+  {
+    if (poly_data.size() != this->NumPoly()) {
+      error.AddMessage
+        ("Programming error.  Incorrect size of vector POLY_DATA::poly_data.");
+      error.AddMessage
+        ("  POLY_DATA::poly_data.size() = ", poly_data.size(), "");
+      error.AddMessage
+        ("  Number of polytopes = ", this->NumPoly(), "");
+      error.AddMessage
+        ("  POLY_DATA::poly_data.size() should equal number of polytopes.");
+      return(false);
+    }
+
+    return(true);
   }
 
 

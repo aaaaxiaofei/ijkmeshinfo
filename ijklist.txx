@@ -344,6 +344,15 @@ namespace IJK {
       return(does_list_contain(List(ilist), ListLength(ilist), el));
     }
 
+    /// Return true if list ilist contains element el.
+    /// - Version which returns first location of element el in list.
+    /// @param[out] iloc Location of element el in list.
+    template <typename ETYPE2, typename ITYPE>
+    bool DoesListContain(const NTYPE ilist, const ETYPE2 el, ITYPE & iloc) const
+    {
+      return(does_list_contain(List(ilist), ListLength(ilist), el, iloc));
+    }
+
     /// Return true if ilistA equals ilistB.
     /// - Lists are equal only if lists have same length and ilistA[k] = ilistB[k]
     ///   for every k.

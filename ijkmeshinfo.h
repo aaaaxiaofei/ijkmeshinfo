@@ -3,7 +3,7 @@
 
 /*
   IJK: Isosurface Jeneration Code
-  Copyright (C) 2010-2016 Rephael Wenger
+  Copyright (C) 2010-2017 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -27,34 +27,109 @@
 #include <string>
 
 #include "ijk.txx"
+#include "ijkcube.txx"
 #include "ijkdatatable.txx"
+#include "ijkmesh_datastruct.txx"
 
 
 namespace IJKMESHINFO {
 
-// **************************************************
-// Global constants
-// **************************************************
+  // **************************************************
+  // Global constants
+  // **************************************************
 
   const int DIM2(2);
   const int DIM3(3);
+  const int NUM_VERT_PER_TETRAHEDRON(4);
+  const int NUM_VERT_PER_HEXAHEDRON(8);
 
-// **************************************************
-// Types
-// **************************************************
 
+  // **************************************************
+  // Types
+  // **************************************************
+
+  typedef int VERTEX_INDEX;
   typedef double COORD_TYPE;    // Use double to detect self-intersections.
   typedef COORD_TYPE * COORD_TYPE_PTR;
   typedef float ANGLE_TYPE;
   typedef IJK::BOX<COORD_TYPE> BOUNDING_BOX;
   typedef int NUM_TYPE;
 
+  typedef typename IJK::VERTEX_POLY_INCIDENCE<int,int> 
+  VERTEX_POLY_INCIDENCE_TYPE;
+  typedef typename IJK::CUBE_FACE_INFO<int,int,int> CUBE_TYPE;
 
-// **************************************************
-// Class MESH_INFO
-// **************************************************
 
-// mesh information
+  // **************************************************
+  // Class POLY_DATA
+  // **************************************************
+
+  class POLY_DATA {
+
+  public:
+    /// True if polytope is degenerate (e.g. has two identical vertices.)
+    bool is_degenerate;
+
+    /// True if polytope is duplicate of some other polytope.
+    bool is_duplicate;
+
+    /// True if polytope contains a non-manifold edge.
+    bool contains_nonmanifold_edge;
+
+    /// True if polytope contains a non-manifold facet.
+    bool contains_nonmanifold_facet;
+
+    /// True if polytope contains a boundary facet.
+    bool contains_boundary_facet;
+
+    /// True if polytope shares a facet with another polytope
+    ///   with different orientation.
+    bool orientation_conflict;
+
+  protected:
+    void Init();
+
+  public:
+
+    POLY_DATA() { Init(); }
+
+    // Get functions
+
+    /// Return true if polytope is a duplicate of some other polytope.
+    bool IsDuplicate() const
+    { return(is_duplicate); }
+
+    /// Return true if polytope is degenerate.
+    bool IsDegenerate() const
+    { return(is_degenerate); }
+
+    /// Return true if polytope contains a non-manifold edge.
+    bool ContainsNonManifoldEdge() const
+    { return(contains_nonmanifold_edge); }
+
+    /// Return true if polytope contains a non-manifold facet.
+    bool ContainsNonManifoldFacet() const
+    { return(contains_nonmanifold_facet); }
+
+    /// Return true if polytope contains a boundary facet.
+    bool ContainsBoundaryFacet() const
+    { return(contains_boundary_facet); }
+
+    /// Return true if polytope shares a facet with another polytope
+    ///   with different orientation.
+    bool OrientationConflict() const
+    { return(orientation_conflict); }
+  };
+
+  typedef typename IJK::POLYMESH_DATA<VERTEX_INDEX,int,POLY_DATA> 
+  POLYMESH_TYPE;
+
+
+  // **************************************************
+  // Class MESH_INFO
+  // **************************************************
+
+  /// Mesh information.
   class MESH_INFO {
 
   protected:
@@ -79,35 +154,27 @@ namespace IJKMESHINFO {
   };
 
 
-// **************************************************
-// Class SIMPLEX_INFO
-// **************************************************
+  // **************************************************
+  // Class MESH_DATA
+  // **************************************************
 
-// list of simplices adjacent to a given simplex
-  class SIMPLEX_INFO {
-  protected:
-    int numv_per_simplex;
-    int num_simplices;
-    int * num_adjacent;
-    int * adjacent;
+  // *** NOT CURRENTLY USED ***
+  class MESH_DATA {
 
   public:
-    SIMPLEX_INFO(const int numv_per_simplex, const int nums,
-		 const int * simplex_vert);
-    ~SIMPLEX_INFO();
+    int dimension;
+    int mesh_dimension;
+    int num_vertices;
 
-    // get functions
-    int NumAdjacent(const int is) const
-    { return(num_adjacent[is]); };
-
-    int AdjacentSimplex(const int iv, const int k)
-    { return(adjacent[numv_per_simplex*iv + k]); };
+    COORD_TYPE * vertex_coord;
+    POLYMESH_TYPE polymesh;
+    MESH_INFO mesh_info;
   };
 
 
-// **************************************************
-// Class FACET_INFO
-// **************************************************
+  // **************************************************
+  // Class FACET_INFO
+  // **************************************************
 
   class FACET_INFO {
   public:
@@ -123,9 +190,9 @@ namespace IJKMESHINFO {
   typedef std::vector<FACET_INFO> FACET_INFO_ARRAY;
 
 
-// **************************************************
-// Class GRID_OF_BINS_3D
-// *************************************************
+  // **************************************************
+  // Class GRID_OF_BINS_3D
+  // *************************************************
 
   class GRID_OF_BINS_3D {
 
@@ -247,9 +314,10 @@ namespace IJKMESHINFO {
 
   };
 
-// **************************************************
-// DATA_COLUMN member functions
-// **************************************************
+
+  // **************************************************
+  // DATA_COLUMN member functions
+  // **************************************************
 
   template <class NTYPE, class DTYPE>
     void DATA_COLUMN<NTYPE,DTYPE>::Include()

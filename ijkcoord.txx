@@ -580,6 +580,14 @@ namespace IJK {
     return(flag);
   }
 
+  ///@}
+
+
+  // **************************************************
+  /// @name Compute angles
+  // **************************************************
+
+  ///@{
 
   /*!
    *  Compute cosine of the angle between two vectors.
@@ -638,29 +646,92 @@ namespace IJK {
   }
 
   /*!
-   *  Compute the cosine of an angle given by 3 points.
-   *  - Compute cosine of angle between (coord1-coord0) and (coord2-coord0).
+   *  Compute the cosine of angle (coord0, coord1, coord2).
+   *  - If either coord1 or coord2 have (nearly) the same coordinates
+   *    as coord0, return 0 and set flag_identical to true.
+   * @param[out] cos_angle Cosine of angle(coord0, coord1, coord2).
    */
   template <typename DTYPE, 
             typename CTYPE0, typename CTYPE1, typename CTYPE2, 
             typename CTYPE3, typename MTYPE>
-  void compute_cos_angle
+  void compute_cos_triangle_angle
   (const DTYPE dimension, 
    const CTYPE0 * coord0, const CTYPE1 * coord1, const CTYPE2 * coord2,
-   const MTYPE max_small_magnitude, CTYPE3 & cos_angle, bool & flag_zero)
+   const MTYPE max_small_magnitude, CTYPE3 & cos_angle, bool & flag_identical)
   {
     IJK::ARRAY<CTYPE0> u1(dimension);
     IJK::ARRAY<CTYPE1> u2(dimension);
 
-    IJK::subtract_coord(dimension, coord1, coord0, u1.Ptr());
-    IJK::subtract_coord(dimension, coord2, coord0, u2.Ptr());
-    compute_cos_angle(dimension, u1.PtrConst(), u2.PtrConst(),
-                      max_small_magnitude, cos_angle, flag_zero);
+    IJK::subtract_coord(dimension, coord0, coord1, u1.Ptr());
+    IJK::subtract_coord(dimension, coord2, coord1, u2.Ptr());
+    IJK::compute_cos_angle(dimension, u1.PtrConst(), u2.PtrConst(),
+                           max_small_magnitude, cos_angle, flag_identical);
   }
 
 
   /*!
-   *  Compute the cosine of the smallest triangle angle.
+   *  Compute the cosine of angle (coord0, coord1, coord2).
+   *  - Version without max_small_magnitude parameter.
+   *  - If either coord1 or coord2 have (nearly) the same coordinates
+   *    as coord0, return zero and set flag_identical to true.
+   * @param[out] cos_angle Cosine of angle(coord0, coord1, coord2).
+   */
+  template <typename DTYPE, 
+            typename CTYPE0, typename CTYPE1, typename CTYPE2, 
+            typename CTYPE3>
+  void compute_cos_triangle_angle
+  (const DTYPE dimension, 
+   const CTYPE0 * coord0, const CTYPE1 * coord1, const CTYPE2 * coord2,
+   CTYPE3 & cos_angle, bool & flag_identical)
+  {
+    IJK::compute_cos_triangle_angle
+      (dimension, coord0, coord1, coord2, 0.0, cos_angle, flag_identical);
+  }
+
+
+  /*!
+   *  Compute the cosine of angle (iv0, iv1, iv2).
+   * - Vertex coordinates are coord[iv0*dimension], coord[iv1*dimension],
+   *   and coord[iv2*dimension].
+   */
+  template <typename DTYPE, typename CTYPE,
+            typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename COS_TYPE, typename MTYPE>
+  void compute_cos_triangle_angle_coord_list
+  (const DTYPE dimension, const CTYPE * vertex_coord, 
+   const VTYPE0 iv0, const VTYPE1 iv1, const VTYPE2 iv2, 
+   const MTYPE max_small_magnitude, 
+   COS_TYPE & cos_angle, bool & flag_identical)
+  {
+    const CTYPE * coord0 = vertex_coord+dimension*iv0;
+    const CTYPE * coord1 = vertex_coord+dimension*iv1;
+    const CTYPE * coord2 = vertex_coord+dimension*iv2;
+
+    compute_cos_triangle_angle
+      (dimension, coord0, coord1, coord2, max_small_magnitude, 
+       cos_angle, flag_identical);
+  }
+
+
+  /*!
+   *  Compute the cosine of angle (iv0, iv1, iv2).
+   *  - Version without max_small_magnitude parameter.
+   */
+  template <typename DTYPE, typename CTYPE,
+            typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename COS_TYPE>
+  void compute_cos_triangle_angle_coord_list
+  (const DTYPE dimension, const CTYPE * vertex_coord, 
+   const VTYPE0 iv0, const VTYPE1 iv1, const VTYPE2 iv2, 
+   COS_TYPE & cos_angle, bool & flag_identical)
+  {
+    compute_cos_triangle_angle_coord_list
+      (dimension, vertex_coord, iv0, iv1, iv2, 0.0, cos_angle, flag_identical);
+  }
+
+
+  /*!
+   *  Compute the cosine of smallest angle of triangle (coord0, coord1, coord2).
    *  - Note: Cosine of the smallest angle is the largest cosine 
    *    of the three angles.
    *  @param dimension Coordinate dimension (= number of coordinates.)
@@ -744,6 +815,175 @@ namespace IJK {
     else {
       flag_zero = true;
     }
+  }
+
+
+  /// Compute cosine of min/max of polygon angles of polygon.
+  /// - If two adjacent polygon vertices have (near) identical coordinates,
+  ///   the angle at those vertices is skipped.
+  /// @param[out] cos_min Cosine of minimum polygon angle.
+  ///    - Note: Min angle has maximimum cosine.
+  /// @param[out] cos_max Cosine of maximum polygon angle.
+  ///    - Note: Max angle has minimum cosine.
+  /// @param[out] num_angle Number of cos angles computed (not skipped).
+  template <typename DTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1,
+            typename CTYPE, typename COS_TYPE0, typename COS_TYPE1>
+  void compute_cos_min_max_polygon_angles
+  (const DTYPE dimension, const VTYPE poly_vert[], const NTYPE0 num_poly_vert,
+   const CTYPE vertex_coord[],
+   COS_TYPE0 & cos_min, COS_TYPE1 & cos_max, NTYPE1 & num_angle)
+  {
+    cos_min = -1;
+    cos_max = 1;
+    num_angle = 0;
+
+    if (num_poly_vert < 3) {
+      // Ignore degenerate polygons with 1 or 2 vertices.
+      return;
+    }
+
+    for (NTYPE0 i0 = 0; i0 < num_poly_vert; i0++) {
+      NTYPE0 i1 = (i0+1)%num_poly_vert;
+      NTYPE0 i2 = (i0+2)%num_poly_vert;
+      VTYPE iv0 = poly_vert[i0];
+      VTYPE iv1 = poly_vert[i1];
+      VTYPE iv2 = poly_vert[i2];
+      COS_TYPE0 cos_angle;
+      bool flag_duplicate_point;
+      IJK::compute_cos_triangle_angle_coord_list
+        (dimension, vertex_coord, iv0, iv1, iv2, 
+         cos_angle, flag_duplicate_point);
+
+      if (!flag_duplicate_point) {
+        num_angle++;
+        if (cos_angle > cos_min) { cos_min = cos_angle; }
+        if (cos_angle < cos_max) { cos_max = cos_angle; }
+      }
+    }
+  }
+
+  /// Compute min/max polygon angles of polgyon.
+  /// - If two adjacent polygon vertices have (near) identical coordinates,
+  ///   the angle at those vertices is skipped.
+  /// @param[out] num_angle Number of angles computed (not skipped).
+  template <typename DTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1,
+            typename CTYPE, typename ATYPE0, typename ATYPE1>
+  void compute_min_max_polygon_angles
+  (const DTYPE dimension, const VTYPE poly_vert[], const NTYPE0 num_poly_vert,
+   const CTYPE vertex_coord[],
+   ATYPE0 & min_angle, ATYPE1 & max_angle, NTYPE1 & num_angle)
+  {
+    ATYPE0 cos_min, cos_max;
+
+    compute_cos_min_max_polygon_angles
+      (dimension, poly_vert, num_poly_vert, vertex_coord,
+       cos_min, cos_max, num_angle);
+    min_angle = std::acos(cos_min) * 180.0/M_PI;
+    max_angle = std::acos(cos_max) * 180.0/M_PI;
+  }
+
+  ///@}
+
+
+  // **************************************************
+  /// @name Compute dihedral angles
+  // **************************************************
+
+  ///@{
+
+  /// Compute cosine of the dihedral angle between triangle (iv0, iv1, iv2)
+  ///   and (iv0, iv1, iv3).
+  /// @param[out] flag_collinear True if (iv0, iv1, iv2) or (iv0, iv1, iv3)
+  ///   are (near) collinear.
+  template <typename DTYPE, typename CTYPE,
+            typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename VTYPE3,
+            typename COS_TYPE>
+  void compute_cos_dihedral_angle
+  (const DTYPE dimension, const CTYPE * vertex_coord,
+   const VTYPE0 iv0, const VTYPE1 iv1, const VTYPE2 iv2, const VTYPE3 iv3,
+   COS_TYPE & cos_angle, bool & flag_fail)
+  {
+    const CTYPE * vertex0_coord = vertex_coord+dimension*iv0;
+    const CTYPE * vertex1_coord = vertex_coord+dimension*iv1;
+    const CTYPE * vertex2_coord = vertex_coord+dimension*iv2;
+    const CTYPE * vertex3_coord = vertex_coord+dimension*iv3;
+    CTYPE magnitude;
+    IJK::ARRAY<CTYPE> w01(dimension);
+    IJK::ARRAY<CTYPE> w02(dimension);
+    IJK::ARRAY<CTYPE> w03(dimension);
+    IJK::ARRAY<CTYPE> u02(dimension);
+    IJK::ARRAY<CTYPE> u03(dimension);
+
+    cos_angle = 1.0;
+
+    compute_unit_vector
+      (dimension, vertex0_coord, vertex1_coord, 0.0, 
+       w01.Ptr(), magnitude, flag_fail);
+    if (flag_fail) { return; }
+    subtract_coord(dimension, vertex2_coord, vertex0_coord, w02.Ptr());
+    subtract_coord(dimension, vertex3_coord, vertex0_coord, w03.Ptr());
+
+    compute_orthogonal_vector(dimension, w02.Ptr(), w01.Ptr(), u02.Ptr());
+    compute_orthogonal_vector(dimension, w03.Ptr(), w01.Ptr(), u03.Ptr());
+
+    normalize_vector
+      (dimension, u02.Ptr(), 0.0, u02.Ptr(), magnitude, flag_fail);
+    if (flag_fail) { return; }
+    normalize_vector
+      (dimension, u03.Ptr(), 0.0, u03.Ptr(), magnitude, flag_fail);
+    if (flag_fail) { return; }
+
+    compute_inner_product(dimension, u02.Ptr(), u03.Ptr(), cos_angle);
+  }
+
+
+  /// Compute cosine of min/max dihedral angles of a tetrahedron.
+  template <typename DTYPE, typename VTYPE, typename CTYPE,
+            typename COS_TYPE0, typename COS_TYPE1, typename NUM_TYPE>
+  void compute_cos_min_max_tetrahedron_dihedral_angles
+  (const DTYPE dimension, const VTYPE tetrahedra_vert[], 
+   const CTYPE * vertex_coord, COS_TYPE0 & cos_min, COS_TYPE1 & cos_max, 
+   NUM_TYPE & num_angle)
+  {
+    const NUM_TYPE NUM_VERT_PER_TETRAHEDRON(4);
+
+    cos_min = -1;
+    cos_max = 1;
+    num_angle = 0;
+
+    for (int i0 = 0; i0 < NUM_VERT_PER_TETRAHEDRON; i0++) {
+      const int iv0 = tetrahedra_vert[i0];
+
+      for (int i1 = i0+1; i1 < NUM_VERT_PER_TETRAHEDRON; i1++) {
+        const int iv1 = tetrahedra_vert[i1];
+
+        int i2 = 0;
+        while (i2 == i0 || i2 == i1) { i2++; }
+
+        int i3 = 0;
+        while (i3 == i0 || i3 == i1 || i3 == i2) { i3++; }
+
+        const int iv2 = tetrahedra_vert[i2];
+        const int iv3 = tetrahedra_vert[i3];
+
+        // Compute dihedral angle between triangle (iv0, iv1, iv2) and
+        //   triangle (iv0, iv1, iv3).
+
+        double cos_angle;
+        bool flag_collinear;
+        compute_cos_dihedral_angle
+          (dimension, vertex_coord, iv0, iv1, iv2, iv3, 
+           cos_angle, flag_collinear);
+
+        if (!flag_collinear) {
+          num_angle++;
+          if (cos_angle > cos_min) { cos_min = cos_angle; }
+          if (cos_angle < cos_max) { cos_max = cos_angle; }
+        }
+      }
+    }
+
   }
 
   ///@}
@@ -1380,7 +1620,7 @@ namespace IJK {
 
 
   // **************************************************
-  // @name 3D versions
+  /// @name 3D versions
   // **************************************************
 
   ///@{
