@@ -935,6 +935,11 @@ namespace IJK {
     if (flag_fail) { return; }
 
     compute_inner_product(dimension, u02.Ptr(), u03.Ptr(), cos_angle);
+
+    // Bound cos_angle to [-1,1].
+    // Numerical error could cause cos_angle to be outside bounds.
+    if (cos_angle < -1) { cos_angle = -1; }
+    if (cos_angle > 1) { cos_angle = 1; }
   }
 
 

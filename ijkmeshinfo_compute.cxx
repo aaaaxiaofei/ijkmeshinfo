@@ -426,7 +426,6 @@ void IJKMESHINFO::compute_min_max_dihedral_angles
       (dimension, polymesh.VertexList(ipoly), vertex_coord,
        cos_min_i, cos_max_i, num_angle);
 
-
     if (num_angle > 0) {
       if (cos_min_i > cos_min) { 
         cos_min = cos_min_i; 
