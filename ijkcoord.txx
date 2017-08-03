@@ -1802,7 +1802,9 @@ namespace IJK {
   }
 
 
-  /// Return determinant of three 2D points.
+  /// Return determinant of three 2D points. <br>
+  /// More precisely, return the determinant 
+  ///   of the 2x2 matrix [(p1-p0),(p2-p0)].
   template <typename COORD_TYPE, typename RESULT_TYPE>
   inline void determinant_point_2D
   (const COORD_TYPE p0[2], const COORD_TYPE p1[2], const COORD_TYPE p2[2],
@@ -1816,7 +1818,9 @@ namespace IJK {
     determinant_2x2(v1[0], v1[1], v2[0], v2[1], result);
   }
 
-  /// Return determinant of four 3D points.
+  /// Return determinant of four 3D points. <br>
+  /// More precisely, return the determinant 
+  ///   of the 3x3 matrix [(p1-p0),(p2-p0),(p3-p0)]. <br>
   /// Note: Equivalent to -determinant((p0,1);(p1,1);(p2,1);(p3,1)).
   template <typename COORD_TYPE, typename RESULT_TYPE>
   inline void determinant_point_3D
