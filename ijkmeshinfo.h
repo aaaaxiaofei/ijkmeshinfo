@@ -158,17 +158,33 @@ namespace IJKMESHINFO {
   // Class MESH_DATA
   // **************************************************
 
-  // *** NOT CURRENTLY USED ***
   class MESH_DATA {
+
+  protected:
+    void Init();
 
   public:
     int dimension;
     int mesh_dimension;
     int num_vertices;
 
+    /// Mesh orientation. +1 or -1.
+    int orientation;
+
+    /// True if boundary facets have been identified.
+    bool are_boundary_facets_identified;
+
+    /// True if nonmanifold facets have been identified.
+    bool are_nonmanifold_facets_identified;
+
+  public:
+    MESH_DATA() { Init(); }
+
+    /* NOT YET INCORPORATED
     COORD_TYPE * vertex_coord;
     POLYMESH_TYPE polymesh;
     MESH_INFO mesh_info;
+    */
   };
 
 
@@ -313,6 +329,76 @@ namespace IJKMESHINFO {
        const double normalization_factor) const;
 
   };
+
+
+  // **************************************************
+  // Check functions
+  // **************************************************
+
+  /// Return false and set error message if dimension != _DIM_.
+  template <const int _DIM_>
+  bool check_dimension(const int dimension, IJK::ERROR & error)
+  {
+    if (dimension == _DIM_)
+      { return(true); }
+    else {
+      error.AddMessage
+        ("Programming error.  Dimension should be ", _DIM_, ".");
+      error.AddMessage("  Dimension = ", dimension, ".");
+      return(false);
+    }
+  }
+
+
+  /// Return false and set error message if mesh_data.dimension != _DIM_.
+  template <const int _DIM_, typename MESH_DATA_TYPE>
+  bool check_dimension
+  (const MESH_DATA_TYPE & mesh_data, IJK::ERROR & error)
+  {
+    const int dimension = mesh_data.dimension;
+    return(check_dimension<_DIM_>(mesh_data.dimension, error));
+  }
+
+
+  /// Return false and set error message if mesh_dim != _MESH_DIM_.
+  template <const int _MESH_DIM_>
+  bool check_mesh_dimension(const int mesh_dim, IJK::ERROR & error)
+  {
+    if (mesh_dim == _MESH_DIM_)
+      { return(true); }
+    else {
+      error.AddMessage
+        ("Programming error.  Mesh dimension should be ", _MESH_DIM_, ".");
+      error.AddMessage
+        ("  Mesh dimension = ", mesh_dim, ".");
+      return(false);
+    }
+  }
+
+
+  /// Return false and set error message 
+  ///   if mesh_data.mesh_dimension != _MESH_DIM_.
+  template <const int _MESH_DIM_, typename MESH_DATA_TYPE>
+  bool check_mesh_dimension
+  (const MESH_DATA_TYPE & mesh_data, IJK::ERROR & error)
+  {
+    const int mesh_dimension = mesh_data.mesh_dimension;
+    return(check_mesh_dimension<_MESH_DIM_>(mesh_data.mesh_dimension, error));
+  }
+
+
+  /// Return false and set error message if boundary facets are not identified.
+  template <typename MESH_DATA_TYPE>
+  bool check_boundary_facets
+  (const MESH_DATA_TYPE & mesh_data, IJK::ERROR & error)
+  {
+    if (mesh_data.are_boundary_facets_identified)
+      { return(true); }
+    else {
+      error.AddMessage("Programming error.  Need to compute boundary facets.");
+      return(false);
+    }
+  }
 
 
   // **************************************************

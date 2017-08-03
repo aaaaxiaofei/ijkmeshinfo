@@ -35,6 +35,7 @@
 #include "ijkstring.txx"
 
 #include "ijkmeshinfoIO.h"
+#include "ijkmeshinfoIO.txx"
 #include "ijkmeshinfo_compute.h"
 
 using namespace std;
@@ -163,33 +164,25 @@ void IJKMESHINFO::output_duplicate_vertices
 // **************************************************
 
 void IJKMESHINFO::output_min_max_polygon_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info,
  const bool flag_internal, const int num_poly_edges)
 {
+  const int dimension = mesh_data.dimension;
+  const char * polygon_descriptor;
   IJK::PROCEDURE_ERROR error("output_min_max_polygon_angle");
 
   string polyname = "polygon";
 
-  if (mesh_dimension != DIM2) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM2, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   ANGLE_TYPE min_angle, max_angle;
   compute_min_max_polygon_angles
-    (dimension, polymesh, vertex_coord, flag_internal, num_poly_edges, 
+    (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_edges, 
      min_angle, max_angle);
 
   get_polygon_name(num_poly_edges, polyname);
@@ -208,29 +201,23 @@ void IJKMESHINFO::output_min_max_polygon_angle
     cout << max_angle << endl; 
   }
 
-  int num_le, num_ge;
   if (io_info.angle_le.IsSet() || io_info.angle_ge.IsSet()) {
+    int num_le, num_ge;
+
+    if (flag_internal) { polygon_descriptor = "internal polygons"; }
+    else { polygon_descriptor = "polygons"; }
+
     compute_num_polygon_angles
       (dimension, polymesh, vertex_coord, flag_internal, 
        io_info.angle_le.Value(), io_info.angle_ge.Value(), num_le, num_ge);
 
     if (io_info.angle_le.IsSet() && io_info.flag_output_min_angle) {
-      if (flag_internal) {
-        cout << "Number of internal polygons with angles <= ";
-      }
-      else {
-        cout << "Number of polygons with angles <= ";
-      }
+      cout << "Number of " << polygon_descriptor << " with angles <= ";
       cout << io_info.angle_le.Value() << ": " << num_le << endl;
     }
 
     if (io_info.angle_ge.IsSet() && io_info.flag_output_max_angle) {
-      if (flag_internal) {
-        cout << "Number of internal polygons with angles >= ";
-      }
-      else {
-        cout << "Number of polygons with angles >= ";
-      }
+      cout << "Number of " << polygon_descriptor << " with angles >= ";
       cout << io_info.angle_ge.Value() << ": " << num_ge << endl;
     }
   }
@@ -240,140 +227,68 @@ void IJKMESHINFO::output_min_max_polygon_angle
 
 // Output polygons with minimum angle
 void IJKMESHINFO::output_polygons_with_min_angle
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_polygons_with_min_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  compute_min_max_polygon_angles
-    (dimension, polymesh, vertex_coord, flag_internal, 
-     min_angle, max_angle, poly_with_min_angle, poly_with_max_angle);
-
-  if (flag_internal) { cout << "Internal polygons with minimum angle "; }
-  else { cout << "Polygons with minimum angle "; }
-  cout << min_angle << ":" << endl;
-
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    IJK::compute_cos_min_max_polygon_angles
-      (dimension, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
-       vertex_coord, cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-      ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_min_angle || min_angle_i == min_angle) {
-        print_poly_index_and_vert
-          (cout, "  Poly ", ": ", "", polymesh, ipoly);
-        cout << "  Min angle: " << min_angle_i;
-        cout << endl;
-      }
-    }
-  }
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "polygons", "Poly", "angle", io_info.max_num_poly_out,
+     compute_min_max_polygon_angles,
+     compute_min_max_polygon_angles);
 }
 
 
 // Output polygons with maximum angle
 void IJKMESHINFO::output_polygons_with_max_angle
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_polygons_with_max_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  compute_min_max_polygon_angles
-    (dimension, polymesh, vertex_coord, flag_internal, 
-     min_angle, max_angle, poly_with_min_angle, poly_with_max_angle);
-
-  if (flag_internal) { cout << "Internal polygons with maximum angle "; }
-  else { cout << "Polygons with maximum angle "; }
-  cout << max_angle << ":" << endl;
-
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    IJK::compute_cos_min_max_polygon_angles
-      (dimension, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
-       vertex_coord, cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-
-      ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_max_angle || max_angle_i == max_angle) {
-        print_poly_index_and_vert
-          (cout, "  Poly ", ": ", "", polymesh, ipoly);
-        cout << "  Max angle: " << max_angle_i;
-        cout << endl;
-      }
-    }
-  }
-
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "polygons", "Poly", "angle", io_info.max_num_poly_out,
+     compute_min_max_polygon_angles,
+     compute_min_max_polygon_angles);
 }
 
 
 // Output polygons with minimum and maximum angles
 void IJKMESHINFO::output_polygons_with_min_max_angles
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
 {
   output_polygons_with_min_angle
-    (dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   output_polygons_with_max_angle
-    (dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_polygons_with_small_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_polygons_with_small_angles");
 
-  if (mesh_dimension != DIM2) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM2, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -428,25 +343,16 @@ void IJKMESHINFO::output_polygons_with_small_angles
 
 // Output polygons with large angles
 void IJKMESHINFO::output_polygons_with_large_angles
-(const int dimension, const int mesh_dimension, 
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_polygons_with_large_angles");
 
-  if (mesh_dimension != DIM2) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM2, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -505,54 +411,37 @@ void IJKMESHINFO::output_polygons_with_large_angles
 // **************************************************
 
 void IJKMESHINFO::output_min_max_tetrahedra_facet_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
-  const char * angle_descriptor;
   IJK::PROCEDURE_ERROR error("output_min_max_tetrahedra_facet_angle");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  ANGLE_TYPE min_angle, max_angle;
-  compute_min_max_tetrahedra_facet_angles
-    (dimension, mesh_dimension, polymesh, vertex_coord, 
-     flag_internal, min_angle, max_angle);
-
-  if (flag_internal) { 
-    angle_descriptor = "internal triangle angle"; 
-  }
-  else { 
-    angle_descriptor = "triangle angle"; 
-  }
-
-  if (io_info.flag_output_min_angle) 
-    { cout << "Min " << angle_descriptor << ": " << min_angle << endl; }
-
-  if (io_info.flag_output_max_angle) 
-    { cout << "Max " << angle_descriptor << ": " << max_angle << endl; }
-
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord,
+     io_info.flag_output_min_angle, io_info.flag_output_max_angle,
+     flag_internal, "triangle angle", 
+     compute_min_max_tetrahedra_facet_angles);
 }
 
 
 void IJKMESHINFO::output_tetrahedra_facet_angle_count
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const char * tetrahedra_descriptor;
+  IJK::PROCEDURE_ERROR error("output_tetrahedra_facet_angle_count");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   if (flag_internal) { tetrahedra_descriptor = "internal tetrahedra"; }
   else { tetrahedra_descriptor = "tetrahedra"; }
@@ -582,157 +471,68 @@ void IJKMESHINFO::output_tetrahedra_facet_angle_count
 
 // Output tetrahedra with minimum facet angle
 void IJKMESHINFO::output_tetrahedra_with_min_facet_angle
-(const int dimension, const int mesh_dimension, 
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
- const bool flag_internal)
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_facet_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  compute_min_max_tetrahedra_facet_angles
-    (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal, 
-     min_angle, max_angle, poly_with_min_angle, poly_with_max_angle);
-
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
-    { cout << "Internal tetrahedra with minimum triangle angle "; }
-  else { cout << "Tetrahedra with minimum triangle angle "; }
-  cout << min_angle << ":" << endl;
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    compute_cos_min_max_tetrahedron_facet_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
-       cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-      ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_min_angle || min_angle_i == min_angle) {
-        print_poly_index_and_vert
-          (cout, "  Tet ", ": ", "", polymesh, ipoly);
-        cout << "  Min triangle angle: " << min_angle_i;
-        cout << endl;
-      }
-    }
-  }
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "triangle angle", io_info.max_num_poly_out,
+     compute_min_max_tetrahedra_facet_angles,
+     compute_min_max_tetrahedron_facet_angles);
 }
 
 
 // Output tetrahedra with maximum facet angle
 void IJKMESHINFO::output_tetrahedra_with_max_facet_angle
-(const int dimension, const int mesh_dimension, 
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
- const bool flag_internal)
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_facet_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  compute_min_max_tetrahedra_facet_angles
-    (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal,
-     min_angle, max_angle, poly_with_min_angle, poly_with_max_angle);
-
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
-    { cout << "Internal tetrahedra with maximum triangle angle "; }
-  else { cout << "Tetrahedra with maximum triangle angle "; }
-  cout << max_angle << ":" << endl;
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    compute_cos_min_max_tetrahedron_facet_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
-       cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-      ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_max_angle || max_angle_i == max_angle) {
-        print_poly_index_and_vert
-          (cout, "  Tet ", ": ", "", polymesh, ipoly);
-        cout << "  Max triangle angle: " << max_angle_i;
-        cout << endl;
-      }
-    }
-  }
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "triangle angle", io_info.max_num_poly_out,
+     compute_min_max_tetrahedra_facet_angles,
+     compute_min_max_tetrahedron_facet_angles);
 }
 
 
 // Output tetrahedra with minimum and maximum facet angles
 void IJKMESHINFO::output_tetrahedra_with_min_max_facet_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
- const bool flag_internal)
+ const IO_INFO & io_info, const bool flag_internal)
 {
   output_tetrahedra_with_min_facet_angle
-    (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   output_tetrahedra_with_max_facet_angle
-    (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_tetrahedra_with_small_facet_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_small_facet_angles");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -788,25 +588,16 @@ void IJKMESHINFO::output_tetrahedra_with_small_facet_angles
 
 // Output tetrahedra with large facet angles.
 void IJKMESHINFO::output_tetrahedra_with_large_facet_angles
-(const int dimension, const int mesh_dimension, 
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_large_facet_angles");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -865,48 +656,36 @@ void IJKMESHINFO::output_tetrahedra_with_large_facet_angles
 // **************************************************
 
 void IJKMESHINFO::output_min_max_dihedral_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
-  const char * angle_descriptor;
   IJK::PROCEDURE_ERROR error("output_min_max_dihedral_angle");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  ANGLE_TYPE min_angle, max_angle;
-  compute_min_max_dihedral_angles
-    (dimension, polymesh, vertex_coord, min_angle, max_angle, flag_internal);
-
-  if (flag_internal) { angle_descriptor = "internal dihedral angle";  }
-  else { angle_descriptor = "dihedral angle"; }
-
-  if (io_info.flag_output_min_angle) 
-    { cout << "Min " << angle_descriptor << ": " << min_angle << endl; }
-
-  if (io_info.flag_output_max_angle) 
-    { cout << "Max " << angle_descriptor << ": " << max_angle << endl; }
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord,
+     io_info.flag_output_min_angle, io_info.flag_output_max_angle,
+     flag_internal, "dihedral angle", compute_min_max_dihedral_angles);
 }
 
 
 void IJKMESHINFO::output_dihedral_angle_count
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const char * tetrahedra_descriptor;
+  IJK::PROCEDURE_ERROR error("output_dihedral_angle_count");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   if (flag_internal) { tetrahedra_descriptor = "internal tetrahedra"; }
   else { tetrahedra_descriptor = "tetrahedra"; }
@@ -935,143 +714,69 @@ void IJKMESHINFO::output_dihedral_angle_count
 
 // Output tetrahedra with minimum dihedral angle.
 void IJKMESHINFO::output_tetrahedra_with_min_dihedral_angle
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_dihedral_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  compute_min_max_dihedral_angles
-    (dimension, polymesh, vertex_coord, min_angle, max_angle, 
-     poly_with_min_angle, poly_with_max_angle, flag_internal);
-
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
-    { cout << "Internal tetrahedra with minimum dihedral angle "; }
-  else 
-    { cout << "Tetrahedra with minimum dihedral angle "; }
-  cout << min_angle << ":" << endl;
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    compute_cos_min_max_tetrahedron_dihedral_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
-       cos_min_i, cos_max_i, num_angle);
-
-
-    if (num_angle > 0) {
-      ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_min_angle || min_angle_i == min_angle) {
-        print_poly_index_and_vert
-          (cout, "  Tet ", ": ", "", polymesh, ipoly);
-        cout << "  Min dihedral angle: " << min_angle_i;
-        cout << endl;
-      }
-    }
-  }
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
+     compute_min_max_dihedral_angles,
+     compute_min_max_tetrahedron_dihedral_angles);
 }
 
 
 // Output tetrahedra with maximum dihedral angle.
 void IJKMESHINFO::output_tetrahedra_with_max_dihedral_angle
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
 {
-  ANGLE_TYPE min_angle, max_angle;
-  int poly_with_min_angle, poly_with_max_angle;
-  int num_angle;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_dihedral_angle");
 
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
-
-  compute_min_max_dihedral_angles
-    (dimension, polymesh, vertex_coord, min_angle, max_angle, 
-     poly_with_min_angle, poly_with_max_angle, flag_internal);
-
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
-    { cout << "Internal tetrahedra with maximum dihedral angle "; }
-  else 
-    { cout << "Tetrahedra with maximum dihedral angle "; }
-  cout << max_angle << ":" << endl;
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
+     compute_min_max_dihedral_angles,
+     compute_min_max_tetrahedron_dihedral_angles);
 
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    compute_cos_min_max_tetrahedron_dihedral_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
-       cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-      ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
-
-      if (ipoly == poly_with_max_angle || max_angle_i == max_angle) {
-        print_poly_index_and_vert
-          (cout, "  Tet ", ": ", "", polymesh, ipoly);
-        cout << "  Max dihedral angle: " << max_angle_i;
-        cout << endl;
-      }
-    }
-  }
 }
 
 
 // Output tetrahedra with minimum and maximum dihedral angles
 void IJKMESHINFO::output_tetrahedra_with_min_max_dihedral_angles
-(const int dimension, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, const bool flag_internal)
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
 {
   output_tetrahedra_with_min_dihedral_angle
-    (dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   output_tetrahedra_with_max_dihedral_angle
-    (dimension, polymesh, vertex_coord, flag_internal);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_tetrahedra_with_small_dihedral_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data, 
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_polygons_with_small_angles");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -1124,25 +829,16 @@ void IJKMESHINFO::output_tetrahedra_with_small_dihedral_angles
 
 // Output tetrahedra with large dihedral angles
 void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
-(const int dimension, const int mesh_dimension, 
+(const MESH_DATA & mesh_data, 
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
+  const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_large_dihedral_angles");
 
-  if (mesh_dimension != DIM3) {
-    error.AddMessage
-      ("Programming error. Mesh dimension should be ", DIM3, ".");
-    error.AddMessage("  Mesh dimension = ", mesh_dimension, ".");
-    throw error;
-  }
-
-  /* NOT YET IMPLEMENTED
-  if (flag_internal && !are_boundary_facets_identified) {
-    error.AddMessage("Programming error.  Need to compute boundary facets.");
-    throw error;
-  }
-  */
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   int num_out = 0;
   COORD_TYPE cos_angle_bound = cos(angle_bound*M_PI/180.0);
@@ -1189,6 +885,268 @@ void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
       cout << "  No tetrahedra with angles >= " << angle_bound << "." << endl;
     }
   }  
+}
+
+
+// **************************************************
+// OUTPUT EDGE LENGTH ROUTINES
+// **************************************************
+
+void IJKMESHINFO::output_min_max_tetrahedra_edge_lengths
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  IJK::PROCEDURE_ERROR error("output_min_max_tetrahedron_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord,
+     io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
+     flag_internal, "edge length", compute_min_max_tetrahedra_edge_lengths);
+}
+
+
+void IJKMESHINFO::output_min_max_hexahedra_edge_lengths
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  IJK::PROCEDURE_ERROR error("output_min_max_hexahedra_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord,
+     io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
+     flag_internal, "edge length", compute_min_max_hexahedra_edge_lengths);
+}
+
+
+// Output polygons with min edge lengths.
+void IJKMESHINFO::output_polygons_with_min_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_polygons_with_min_edge_lengths");
+
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "polgyons", "Poly", "edge length", io_info.max_num_poly_out,
+     compute_min_max_polygon_edge_lengths,
+     compute_min_max_polygon_edge_lengths);
+}
+
+
+// Output polygons with max edge lengths.
+void IJKMESHINFO::output_polygons_with_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_polygons_with_max_edge_lengths");
+
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "polgyons", "Poly", "edge length", io_info.max_num_poly_out,
+     compute_min_max_polygon_edge_lengths,
+     compute_min_max_polygon_edge_lengths);
+}
+
+
+// Output polygons with min and maximum edge lengths.
+void IJKMESHINFO::output_polygons_with_min_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  output_polygons_with_min_edge_lengths
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+  output_polygons_with_max_edge_lengths
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+}
+
+
+// Output tetrahedra with min edge lengths.
+void IJKMESHINFO::output_tetrahedra_with_min_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, 
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "edge length", io_info.max_num_poly_out,
+     compute_min_max_tetrahedra_edge_lengths,
+     compute_min_max_tetrahedron_edge_lengths);
+}
+
+
+// Output tetrahedra with max edge lengths.
+void IJKMESHINFO::output_tetrahedra_with_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "tetrahedra", "Tet", "edge length", io_info.max_num_poly_out,
+     compute_min_max_tetrahedra_edge_lengths,
+     compute_min_max_tetrahedron_edge_lengths);
+}
+
+
+// Output hexahedra with min edge lengths.
+void IJKMESHINFO::output_hexahedra_with_min_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_hexahedra_with_min_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "edge length", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_edge_lengths,
+     compute_min_max_hexahedron_edge_lengths);
+}
+
+
+// Output hexahedra with max edge lengths.
+void IJKMESHINFO::output_hexahedra_with_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error("output_hexahedra_with_max_edge_lengths");
+
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "edge length", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_edge_lengths,
+     compute_min_max_hexahedron_edge_lengths);
+}
+
+
+// **************************************************
+// OUTPUT JACOBIAN ROUTINES
+// **************************************************
+
+void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error("output_min_max_hexahedra_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_Jacobian_determinants,
+     io_info.flag_output_max_Jacobian_determinants,
+     flag_internal, "Jacobian determinant", 
+     compute_min_max_hexahedra_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
+
+  output_min_max_hexahedra_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, io_info,
+     flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+// Output hexahedra with min Jacobian determinants.
+void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_min_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "Jacobian determinant", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_Jacobian_determinants,
+     compute_min_max_hexahedron_Jacobian_determinant);
+}
+
+
+// Output hexahedra with max Jacobian determinants.
+void IJKMESHINFO::output_hexahedra_with_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_max_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "Jacobian determinant", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_Jacobian_determinants,
+     compute_min_max_hexahedron_Jacobian_determinant);
 }
 
 
@@ -1256,7 +1214,8 @@ void IJKMESHINFO::usage_msg()
 {
   cerr << "Usage: ijkmeshinfo [OPTIONS] {input file}" << endl;
   cerr << "OPTIONS:" << endl;
-  cerr << "  [-mesh_dim {mdim}] [-vertex {vnum}] [-simplex {snum}] [-poly {pnum}]"
+  cerr << "  [-mesh_dim {mdim}] [-reverse_orient]" << endl;
+  cerr << "  [-vertex {vnum}] [-simplex {snum}] [-poly {pnum}]"
        << endl;
   cerr << "  [-vlist] [-plist] [-manifold | -oriented_manifold]" << endl;
   cerr << "  [-containsv {vnum}] [-containse {end0} {end1}]" << endl;
@@ -1269,7 +1228,7 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-out_values] [-out_min_angle] [-out_max_angle] [-plot_angles]"
        << endl;
   cerr << "  [-report_deep] [-for_each_type]" << endl;
-  cerr << "  [-terse] [-help]" << endl;
+  cerr << "  [-max_out <N>] [-terse] [-help]" << endl;
 }
 
 void IJKMESHINFO::usage_error()
@@ -1281,34 +1240,35 @@ void IJKMESHINFO::usage_error()
 void IJKMESHINFO::help_msg()
 {
   cerr << "Usage: ijkmeshinfo [OPTIONS] {input file}" << endl;
-  cerr << "  [-mesh_dim {mdim}]:   Mesh dimension." << endl;
-  cerr << "  [-vertex {vnum}]:     Print coordinates of vertex {vnum}."
+  cerr << "  -mesh_dim {mdim}:   Mesh dimension." << endl;
+  cerr << "  -reverse_orient:    Reverse the orientation of each mesh element." << endl;
+  cerr << "  -vertex {vnum}:     Print coordinates of vertex {vnum}."
        << endl;
-  cerr << "  [-simplex {snum}]:    Print vertices of simplex {snum}."
+  cerr << "  -simplex {snum}:    Print vertices of simplex {snum}."
        << endl;
-  cerr << "  [-poly {pnum}]:       Print vertices of poly {pnum}."
+  cerr << "  -poly {pnum}:       Print vertices of poly {pnum}."
        << endl;
-  cerr << "  [-vlist]:             Print list of vertex coordinates." << endl;
+  cerr << "  -vlist:             Print list of vertex coordinates." << endl;
   cerr << "     Prints only vertices with coordinates between min coord and max coord."
        << endl;
-  cerr << "  [-plist]:             Print list of polygons/polytopes." << endl;
+  cerr << "  -plist:             Print list of polygons/polytopes." << endl;
   cerr << "     Prints only polygons/polytopes with number of vertices between"
        << endl;
   cerr << "       <min_numv> and <max_numv>." << endl;
-  cerr << "  [-manifold]:          Print manifold information." << endl;
-  cerr << "  [-oriented_manifold]: Print manifold and orientation information."
+  cerr << "  -manifold:          Print manifold information." << endl;
+  cerr << "  -oriented_manifold: Print manifold and orientation information."
        << endl;
-  cerr << "  [-selfI]:             Print self intersections." << endl;
-  cerr << "  [-containsv {vnum}]:  Print list of simplices containing vertex {vnum}."
+  cerr << "  -selfI:             Print self intersections." << endl;
+  cerr << "  -containsv {vnum}:  Print list of simplices containing vertex {vnum}."
        << endl;
-  cerr << "  [-containse {end0} {end1}}]:  Print list of simplices containing"
+  cerr << "  -containse {end0} {end1}}:  Print list of simplices containing"
        << endl;
   cerr << "                          edge ({end0},{end1})." << endl;
-  cerr << "  [-minc \"min coord\"]:  Minimum coordinates." << endl;
-  cerr << "  [-maxc \"min coord\"]:  Maximum coordinates." << endl;
-  cerr << "  [-min_numv <N>]:      Minimum number of poly vertices." << endl;
-  cerr << "  [-max_numv <N>]:      Maximum number of poly vertices." << endl;
-  cerr << "  [-angle_le <A>]:" << endl;
+  cerr << "  -minc \"min coord\":  Minimum coordinates." << endl;
+  cerr << "  -maxc \"min coord\":  Maximum coordinates." << endl;
+  cerr << "  -min_numv <N>:      Minimum number of poly vertices." << endl;
+  cerr << "  -max_numv <N>:      Maximum number of poly vertices." << endl;
+  cerr << "  -angle_le <A>:" << endl;
   cerr << "     Report number of polygons with angles less than or equal to <A>"
        << endl
        << "       or number of tetrahedra with dihedral angles less than" 
@@ -1317,7 +1277,7 @@ void IJKMESHINFO::help_msg()
   cerr << "     Use with -plist to list polygons or tetrahedra with angles"
        << endl
        << "       or dihedral angles less than or equal to <A>." << endl;
-  cerr << "  [-angle_ge <A>]:" << endl;
+  cerr << "  -angle_ge <A>:" << endl;
   cerr << "     Report number of polygons with angles greater than or equal to <A>" << endl
        << "       or number of tetrahedra with dihedral angles greater than" 
        << endl
@@ -1325,20 +1285,20 @@ void IJKMESHINFO::help_msg()
   cerr << "     Use with -plist to list polygons or tetrahedra with angles or"
        << endl
        << "       dihedral angles greater than or equal to <A>." << endl;
-  cerr << "  [-facet_angle_le <A>]:" << endl;
+  cerr << "  -facet_angle_le <A>:" << endl;
   cerr << "     Report number of tetrahedra with facet angles less than or equal to <A>." << endl;
   cerr << "     Use with -plist to list tetrahedra with facet angles less than"
        << endl
        << "       or equal to <A>." << endl;
-  cerr << "  [-facet_angle_ge <A>]:" << endl;
+  cerr << "  -facet_angle_ge <A>:" << endl;
   cerr << "     Report number of tetrahedra with facet angles greater than or equal to <A>." << endl;
   cerr << "     Use with -plist to list tetrahedra with facet angles greater than" << endl
        << "       or equal to <A>." << endl;
-  cerr << "  [-list_dup]:          List duplicate poly vertices or poly vertices" << endl;
+  cerr << "  -list_dup:          List duplicate poly vertices or poly vertices" << endl;
   cerr << "                           with identical coordinates." << endl;
-  cerr << "  [-internal]:          Report only angles for internal polygons."
+  cerr << "  -internal:          Report only angles for internal polygons."
        << endl;
-  cerr << "  [-out_values]:        Output only values for -manifold option."
+  cerr << "  -out_values:        Output only values for -manifold option."
        << endl;
   cerr << "     Output number of non-manifold vertices, number of non-manifold vertices"
        << endl
@@ -1347,19 +1307,20 @@ void IJKMESHINFO::help_msg()
        << "     number of internal boundary facets and number of facets"
        << endl
        << "     at least 1 from bounding box." << endl;
-  cerr << "  [-out_min_angle]:     Output minimum triangle angle." << endl;
-  cerr << "  [-out_max_angle]:     Output maximum triangle angle." << endl;
-  cerr << "  [-plot_angles]:       Create gnuplot (.gplt) files of min and max"
+  cerr << "  -out_min_angle:     Output minimum triangle angle." << endl;
+  cerr << "  -out_max_angle:     Output maximum triangle angle." << endl;
+  cerr << "  -plot_angles:       Create gnuplot (.gplt) files of min and max"
        << endl
        << "                          triangle angles." << endl;
-  cerr << "  [-report_deep]:       Report only boundary facets at least distance 1"
+  cerr << "  -report_deep:       Report only boundary facets at least distance 1"
        << endl
        << "                          from bounding box." << endl;
-  cerr << "  [-for_each_type]:     Reports angles separately for triangles, "
+  cerr << "  -for_each_type:     Reports angles separately for triangles, "
        << endl
        << "                          quadrilaterals, pentagons, ..." << endl;
-  cerr << "  [-terse]:             Terse output.  Affects -manifold and -containsv options." << endl;
-  cerr << "  [-help]:              Print this help message." << endl;
+  cerr << "  -max_out <N>:       Limit number of polytopes in output lists to <N>." << endl;
+  cerr << "  -terse:             Terse output.  Affects -manifold and -containsv options." << endl;
+  cerr << "  -help:              Print this help message." << endl;
   exit(20);
 }
 
@@ -1370,6 +1331,14 @@ void IJKMESHINFO::help_msg()
 
 void IO_INFO::Init()
 {
+  max_num_poly_out = 5;
   flag_output_min_angle = false;
   flag_output_max_angle = false;
+  flag_output_min_edge_length = false;
+  flag_output_max_edge_length = false;
+  flag_output_all_min_max = false;
+  flag_output_min_Jacobian_determinants = false;
+  flag_output_max_Jacobian_determinants = false;
+  flag_general_info = true;
 };
+

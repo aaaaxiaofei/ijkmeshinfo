@@ -58,12 +58,35 @@ namespace IJKMESHINFO {
     /// Output values less than or equal to facet_angle_ge.Value().
     IJK::SET_VALUE<ANGLE_TYPE> facet_angle_ge;
 
+    /// Limit on number of polytopes in output list.
+    int max_num_poly_out;
+
     /// If true, output min angle.
     bool flag_output_min_angle;
 
     /// If true, output max angle.
     bool flag_output_max_angle;
 
+    /// If true, output min edge length.
+    bool flag_output_min_edge_length;
+
+    /// If true, output max edge length.
+    bool flag_output_max_edge_length;
+
+    /// If true, output min of the Jacobian determinants.
+    bool flag_output_min_Jacobian_determinants;
+
+    /// If true, output max of the Jacobian determinants.
+    bool flag_output_max_Jacobian_determinants;
+
+    /// If true, output all polytopes with minimum and maximum values.
+    bool flag_output_all_min_max;
+
+    /// If true, output general information about the mesh.
+    bool flag_general_info;
+
+
+  public:
     /// Constructor
     IO_INFO():angle_le(0),angle_ge(180) { Init(); };
   };
@@ -106,36 +129,37 @@ namespace IJKMESHINFO {
 
   /// Output the minimum and maximum angles of a set of polygons.
   void output_min_max_polygon_angle
-  (const int dimension, const int mesh_dimension,
-   const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, 
-   const IO_INFO & io_info,
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord, const IO_INFO & io_info,
    const bool flag_internal, const int num_poly_edges);
 
   /// Output polygons with minimum angle.
   void output_polygons_with_min_angle
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord, 
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output polygons with maximum angle.
   void output_polygons_with_max_angle
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord, 
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output polygons with minimum and maximum angles.
   void output_polygons_with_min_max_angles
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord, 
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output polygons with angles less than min_angle.
   void output_polygons_with_small_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE min_angle);
 
   /// Output polygons with large angles
   void output_polygons_with_large_angles
-  (const int dimension, const int mesh_dimension, 
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE max_angle);
 
@@ -147,44 +171,44 @@ namespace IJKMESHINFO {
   /// Output the minimum and maximum angles of the set of triangles
   ///   which are the tetrahedra facets.
   void output_min_max_tetrahedra_facet_angle
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const IO_INFO & io_info, const bool flag_internal);
 
   /// Output number of tetrahedra facets with angles less than 
   ///   or greater than given values.
   void output_tetrahedra_facet_angle_count
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with minimum facet angle.
   void output_tetrahedra_with_min_facet_angle
-  (const int dimension, const int mesh_dimension, 
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
-   const bool flag_internal);
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with maximum facet angle.
   void output_tetrahedra_with_max_facet_angle
-  (const int dimension, const int mesh_dimension, 
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
-   const bool flag_internal);
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with minimum and maximum facet angles.
   void output_tetrahedra_with_min_max_facet_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
-   const bool flag_internal);
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with small facet angles.
   void output_tetrahedra_with_small_facet_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE angle_bound);
 
   /// Output tetrahedra with large facet angles.
   void output_tetrahedra_with_large_facet_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE angle_bound);
 
@@ -195,43 +219,137 @@ namespace IJKMESHINFO {
 
   /// Output minimum/maximum dihedral angle.
   void output_min_max_dihedral_angle
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal);
 
   /// Output number of tetrahedra with angles less than or greater than
   ///   given values.
   void output_dihedral_angle_count
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with minimum dihedral angle.
   void output_tetrahedra_with_min_dihedral_angle
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh, 
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with maximum dihedral angle.
   void output_tetrahedra_with_max_dihedral_angle
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh, 
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with minimum and maximum dihedral angles.
   void output_tetrahedra_with_min_max_dihedral_angles
-  (const int dimension, const POLYMESH_TYPE & polymesh,
-   const COORD_TYPE * vertex_coord, const bool flag_internal);
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh, 
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
 
   /// Output tetrahedra with small dihedral angles.
   void output_tetrahedra_with_small_dihedral_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE min_angle);
 
   /// Output tetrahedra with large dihedral angles.
   void output_tetrahedra_with_large_dihedral_angles
-  (const int dimension, const int mesh_dimension,
+  (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
    const bool flag_internal, const ANGLE_TYPE min_angle);
+
+
+  // **************************************************
+  // OUTPUT EDGE LENGTH ROUTINES
+  // **************************************************
+
+  /// Output minimum/maximum tetrahedra edge lengths.
+  void output_min_max_tetrahedra_edge_lengths
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output minimum/maximum hexahedra edge lengths.
+  void output_min_max_hexahedra_edge_lengths
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output polygons with minimum edge lengths.
+  void output_polygons_with_min_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output polygons with max edge lengths.
+  void output_polygons_with_max_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output polygons with minimum and maximum edge lengths.
+  void output_polygons_with_min_max_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output tetrahedra with minimum edge lengths.
+  void output_tetrahedra_with_min_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output tetrahedra with maximum edge lengths.
+  void output_tetrahedra_with_max_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output hexahedra with mininum edge lengths.
+  void output_hexahedra_with_min_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output hexahedra with maximum edge lengths.
+  void output_hexahedra_with_max_edge_lengths
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+
+  // **************************************************
+  // OUTPUT JACOBIAN ROUTINES
+  // **************************************************
+
+  /// Output minimum and maximum hexahedra Jacobian matrix determinants.
+  void output_min_max_hexahedra_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant);
+
+  /// Output minimum and maximum hexahedra Jacobian matrix determinants.
+  /// - Version which does not return min/max Jacobian determinants.
+  void output_min_max_hexahedra_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output hexahedra with min Jacobian determinants.
+  void output_hexahedra_with_min_Jacobian_determinants
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output hexahedra with max Jacobian determinants.
+  void output_hexahedra_with_max_Jacobian_determinants
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
 
 
   // **************************************************

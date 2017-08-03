@@ -50,10 +50,7 @@ using namespace IJKMESHINFO;
 using namespace IJK;
 
 // global variables
-int dimension(DIM3);
-int mesh_dimension;
 bool is_mesh_dimension_set(false);
-int num_vertices = 0;
 int num_simplices = 0;
 int num_edges = 0;
 int num_poly = 0;
@@ -100,16 +97,8 @@ int DEFAULT_TABLE_COLUMN_WIDTH = 8;
 int DEFAULT_TABLE_PRECISION = 4;
 MESH_INFO mesh_info;
 IO_INFO io_info;
-
-/* DEBUG
 MESH_DATA mesh_data;
-*/
 
-// true if boundary facets have been identified.
-bool are_boundary_facets_identified = false;
-
-// true if nonmanifold facets have been identified.
-bool are_nonmanifold_facets_identified = false;
 
 // List of poly with orientation conflicts.
 vector<int> orientation_conflict_list;  
@@ -140,7 +129,6 @@ int poly_index = 0;
 int edge_end0_index = 0;
 int edge_end1_index = 0;
 
-bool general_info_flag = true;
 bool vertex_info_flag = false;
 bool simplex_info_flag = false;
 bool poly_info_flag = false;
@@ -155,7 +143,7 @@ bool contains_edge_flag = false;
 // compute info routines
 void compute_bounding_box();
 int compute_num_edges();
-int count_deep_vertices(const std::vector<int> & vlist);
+int count_deep_vertices(const int dimension, const std::vector<int> & vlist);
 void compute_facet_info();
 int count_num_poly(const int num_poly_vert);
 
@@ -201,8 +189,8 @@ void write_table_gplt(ofstream & ofile, const TABLE_TYPE & table);
 
 // output info routines
 void output_general_info(const POLYMESH_TYPE & polymesh);
-void output_vertex_info(const int vertex_index);
-void output_simplex_info(const int simplex_index);
+void output_vertex_info(const int dimension, const int vertex_index);
+void output_simplex_info(const int dimension, const int simplex_index);
 void output_manifold_info();
 void output_nonmanifold_facets();
 void output_nonmanifold_edges();
@@ -216,24 +204,49 @@ bool output_self_intersections();
 bool output_self_intersections_using_grid_of_bins();
 void output_manifold_and_boundary_counts();
 void output_poly_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal);
 
 void output_min_max_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal);
 void output_min_max_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal, const int num_poly_edges);
+void output_min_max_polygon_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, const bool flag_internal,
+ const int num_poly_edges);
+void output_min_max_polygon_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, const bool flag_internal);
 void output_min_max_edge_lengths
-(const POLYMESH_TYPE & polymesh,
- const bool flag_internal, const int num_poly_edges);
-void output_min_max_edge_lengths
-(const POLYMESH_TYPE & polymesh, const bool flag_internal);
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, const IO_INFO & io_info,
+ const bool flag_internal);
+void output_poly_with_min_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal);
+void output_poly_with_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal);
+void output_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal, 
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant);
+void output_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal);
 void write_nonmanifold_edges();
+
+
 
 // intersection routines
 int is_num_poly_vert_constant(const std::vector<int> & num_poly_vert);
@@ -256,7 +269,7 @@ void check_input();
 
 // PARAMETER TYPE
 typedef enum
-  {POLYFILE_PARAM, MESH_DIM_PARAM,
+  {POLYFILE_PARAM, MESH_DIM_PARAM, REVERSE_ORIENT_PARAM,
    VERTEX_PARAM, SIMPLEX_PARAM, POLY_PARAM,
    VLIST_PARAM, PLIST_PARAM, CONTAINSV_PARAM, CONTAINSE_PARAM,
    MANIFOLD_PARAM, ORIENTED_MANIFOLD_PARAM,
@@ -269,9 +282,11 @@ typedef enum
    REPORT_DEEP_PARAM, OUT_VALUES_PARAM,
    OUT_MIN_ANGLE_PARAM, OUT_MAX_ANGLE_PARAM, PLOT_ANGLES_PARAM,
    FOR_EACH_TYPE_PARAM, 
+   MAX_OUT_PARAM,
    TERSE_PARAM, HELP_PARAM, UNKNOWN_PARAM} PARAMETER;
 const char * parameter_string[] = 
-  {"-polyfile", "-mesh_dim", "-vertex", "-simplex", "-poly",
+  {"-polyfile", "-mesh_dim", "-reverse_orient",
+   "-vertex", "-simplex", "-poly",
    "-vlist", "-plist", "-containsv", "-containse",
    "-manifold", "-oriented_manifold",
    "-selfI", "-selfI_no_grid", "-grid_length",
@@ -282,7 +297,7 @@ const char * parameter_string[] =
    "-list_dup", "-internal",
    "-report_deep", "-out_values", "-out_min_angle", "-out_max_angle",
    "-plot_angles", "-for_each_type",
-   "-terse", "-help", "-unknown"};
+   "-max_out", "-terse", "-help", "-unknown"};
 
 
 // **************************************************
@@ -310,23 +325,26 @@ int main(int argc, char **argv)
 
     if (flag_internal) { compute_facet_info(); }
 
-    if (general_info_flag) { output_general_info(polymesh); }
+    if (io_info.flag_general_info) { output_general_info(polymesh); }
     else if (io_info.flag_output_min_angle || io_info.flag_output_max_angle) {
       output_min_max_angle
-        (dimension, mesh_dimension, polymesh, vertex_coord, io_info, 
-         flag_internal); 
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
     }
-    if (vertex_info_flag) { output_vertex_info(vertex_index); };
+    if (vertex_info_flag) 
+      { output_vertex_info(mesh_data.dimension, vertex_index); };
     if (poly_info_flag) { 
-      output_poly_info(dimension, polymesh, vertex_coord, poly_index); 
+      output_poly_info
+        (mesh_data.dimension, polymesh, vertex_coord, poly_index); 
     };
     if (simplex_info_flag && !flag_simplex_file) {
       if (simplex_info_flag) { 
-        output_poly_info(dimension, polymesh, vertex_coord, simplex_index); 
+        output_poly_info
+          (mesh_data.dimension, polymesh, vertex_coord, simplex_index); 
       };
     }
     else {
-      if (simplex_info_flag) { output_simplex_info(simplex_index); };
+      if (simplex_info_flag) 
+        { output_simplex_info(mesh_data.dimension, simplex_index); };
     }
 
     if (manifold_flag) { 
@@ -350,12 +368,12 @@ int main(int argc, char **argv)
       else {
 
         bool flag_passed_tests = mesh_info.AreAllZero();
-        if (mesh_dimension < dimension) {
+        if (mesh_data.mesh_dimension < mesh_data.dimension) {
           flag_passed_tests = (flag_passed_tests && passed_boundary_test);
         }
 
         if (terse_flag && flag_passed_tests) {
-          if (mesh_dimension < dimension) {
+          if (mesh_data.mesh_dimension < mesh_data.dimension) {
             if (oriented_manifold_flag) 
               { cout << "Passed all manifold, boundary and orientation tests." 
                      << endl; }
@@ -369,7 +387,7 @@ int main(int argc, char **argv)
               { cout << "Passed all manifold tests." << endl; }
           }
         }
-        else if (mesh_dimension == 2 && output_filename != NULL) {
+        else if (mesh_data.mesh_dimension == DIM2 && output_filename != NULL) {
           write_nonmanifold_edges();
         }
         else {
@@ -377,7 +395,7 @@ int main(int argc, char **argv)
           if (terse_flag) {
             if (!passed_all_manifold_tests) 
               { cout << "Failed manifold tests.  "; }
-            if (mesh_dimension < dimension) {
+            if (mesh_data.mesh_dimension < mesh_data.dimension) {
               if (flag_report_deep) {
                 if (num_deep_boundary_facets != 0) 
                   { cout << "Failed boundary test.";  }
@@ -402,7 +420,7 @@ int main(int argc, char **argv)
 
     if (flag_report_self_intersections) {
       if (flag_simplex_file && num_vert_per_simplex == 3 &&
-          dimension == DIM3) {
+          mesh_data.dimension == DIM3) {
         flag_self_intersect = output_self_intersections();
       }
     }
@@ -415,7 +433,7 @@ int main(int argc, char **argv)
         { output_polytopes(); }
 
       if (flag_list_duplicate_vertices) {
-        output_duplicate_vertices(dimension, polymesh, vertex_coord); 
+        output_duplicate_vertices(mesh_data.dimension, polymesh, vertex_coord); 
         cout << endl;
       }
 
@@ -431,12 +449,15 @@ int main(int argc, char **argv)
 
     if (plist_flag) {
       output_poly_angles
-        (dimension, mesh_dimension, polymesh, vertex_coord,
-         io_info, flag_internal);
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+      output_poly_with_min_max_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+      output_poly_with_min_max_Jacobian_determinants
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
     }
 
     if (is_mesh_dimension_set || !flag_polyfile) {
-      if (mesh_dimension == 2 && flag_plot_angles) {
+      if (mesh_data.mesh_dimension == DIM2 && flag_plot_angles) {
         ANGLE_TABLE angle_table;
         angle_table.angle.Include();
         angle_table.angle.SetAtIntervals(0, 1);
@@ -498,7 +519,7 @@ int main(int argc, char **argv)
   if (manifold_flag && !passed_all_manifold_tests) {
     return(1);
   }
-  if (manifold_flag && (mesh_dimension < dimension) && 
+  if (manifold_flag && (mesh_data.mesh_dimension < mesh_data.dimension) && 
       !passed_boundary_test) {
     return(1);
   }
@@ -533,7 +554,7 @@ void read_input_file
   };
 
   ijkinPolytopeOFF
-    (in, dimension, vertex_coord, num_vertices, 
+    (in, mesh_data.dimension, vertex_coord, mesh_data.num_vertices, 
      polymesh.list_length, polymesh.element, polymesh.first_element);
   polymesh.poly_data.resize(polymesh.NumPoly());
 
@@ -556,7 +577,7 @@ void read_input_file
 
     if (!is_mesh_dimension_set) {
 
-      if (dimension == 3 && num_vert_per_poly == 4) {
+      if (mesh_data.dimension == DIM3 && num_vert_per_poly == 4) {
         cerr << "Unable to determine mesh dimension." << endl;
         cerr << "  Input polytopes could be tetrahedra or quadrilaterals."
              << endl;
@@ -564,20 +585,20 @@ void read_input_file
         exit(20);
       }
 
-      if (num_vert_per_poly <= dimension+1) {
+      if (num_vert_per_poly <= mesh_data.dimension+1) {
         // Assume poly are all simplices.
-        mesh_dimension = num_vert_per_poly-1;
+        mesh_data.mesh_dimension = num_vert_per_poly-1;
       }
       else if (num_vert_per_poly == NUMV_PER_CUBE) {
-        mesh_dimension = DIM3;
+        mesh_data.mesh_dimension = DIM3;
         flag_cube_file = true;
       }
       else {
-        mesh_dimension = dimension;
+        mesh_data.mesh_dimension = mesh_data.dimension;
       }
     }
 
-    if (num_vert_per_poly <= mesh_dimension+1) {
+    if (num_vert_per_poly <= mesh_data.mesh_dimension+1) {
 
       // Copy poly_vert into simplex_vert.
       simplex_vert = new int[polymesh.element.size()];
@@ -597,7 +618,7 @@ void read_input_file
     }
 
     if (flag_cube_file && is_mesh_dimension_set) {
-      const int numv_per_cube = (1 << mesh_dimension);
+      const int numv_per_cube = (1 << mesh_data.mesh_dimension);
       if (numv_per_cube != num_vert_per_poly) {
         const int cube_dimension = 
           IJK::compute_cube_dimension_from_num_vertices(num_vert_per_poly);
@@ -605,7 +626,8 @@ void read_input_file
         cerr << "  Input file cubes have "
              << numv_per_cube << " vertices and dimension "
              << cube_dimension << "." << endl;
-        cerr << "  Argument of -mesh_dim is " << mesh_dimension << "." << endl;
+        cerr << "  Argument of -mesh_dim is " << mesh_data.mesh_dimension 
+             << "." << endl;
         cerr << "  Change argument of -mesh_dim to " << cube_dimension
              << "." << endl;
         exit(20);
@@ -613,10 +635,11 @@ void read_input_file
     }
 
     if (is_mesh_dimension_set) {
-      if (num_vert_per_poly <= mesh_dimension) {
+      if (num_vert_per_poly <= mesh_data.mesh_dimension) {
         cerr << "Warning:  All polygons in input file are degenerate."
              << endl;
-        cerr << "  Argument of -mesh_dim is " << mesh_dimension << "." << endl;
+        cerr << "  Argument of -mesh_dim is " << mesh_data.mesh_dimension 
+             << "." << endl;
         cerr << "  All polygons have "  << num_vert_per_poly
              << " vertices." << endl;
         cerr << endl;
@@ -628,11 +651,12 @@ void read_input_file
     flag_polyfile = true;
 
     if (!is_mesh_dimension_set) {
-      mesh_dimension = dimension-1;
+      mesh_data.mesh_dimension = mesh_data.dimension-1;
 
       cerr << "Warning: Unable to determine mesh dimension from input file."
            << endl;
-      cerr << "  Assuming mesh dimension is " << mesh_dimension << "." << endl;
+      cerr << "  Assuming mesh dimension is " 
+           << mesh_data.mesh_dimension << "." << endl;
       cerr << "  Use option \"-mesh_dim {mdim}\" to specify mesh dimension."
            << endl;
       cerr << endl;
@@ -640,12 +664,13 @@ void read_input_file
   }
 
   if (flag_internal) {
-    if (!flag_simplex_file && !mesh_dimension == 2) {
+    if (!flag_simplex_file && !mesh_data.mesh_dimension == DIM2) {
       cerr << "Option -internal only implemented for mesh of simplices or for mesh dimension 2." << endl;
       exit(35);
     }
   }
 }
+
 
 int is_num_poly_vert_constant(const std::vector<int> & num_poly_vert)
 {
@@ -671,6 +696,10 @@ int is_num_poly_vert_constant(const std::vector<int> & num_poly_vert)
 
 void output_general_info(const POLYMESH_TYPE & polymesh)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  const int num_vertices = mesh_data.num_vertices;
+
   compute_bounding_box();
   if (!flag_polyfile) {
     num_edges = compute_num_edges();
@@ -680,7 +709,7 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
   cout << "Mesh dimension: " << mesh_dimension << endl;
   cout << "Number of mesh vertices: " << num_vertices << endl;
   if (flag_polyfile) {
-    if (mesh_dimension <= 2) {
+    if (mesh_dimension <= DIM2) {
       cout << "Number of mesh polygons: " << num_poly << endl;
     }
     else {
@@ -688,16 +717,17 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
     }
   }
   else {
-    if (dimension > 2) {
+    if (dimension > DIM2) {
       cout << "Number of mesh edges: " << num_edges << endl;
       cout << "Number of mesh simplices: " << num_simplices << endl;
     }
-    else if (dimension == 2) {
+    else if (dimension == DIM2) {
       cout << "Number of mesh edges: " << num_simplices << endl;
     }
 
-    if (dimension == 3) {
-      cout << "#V - #E + #F = " << num_vertices - num_edges + num_simplices 
+    if (dimension == DIM3) {
+      cout << "#V - #E + #F = " 
+           << num_vertices - num_edges + num_simplices 
            << endl;
     }
   }
@@ -714,17 +744,31 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
 
   io_info.flag_output_min_angle = true;
   io_info.flag_output_max_angle = true;
-  output_min_max_angle
-    (dimension, mesh_dimension, polymesh, vertex_coord, io_info, false);
+  output_min_max_angle(mesh_data, polymesh, vertex_coord, io_info, false);
 
   if (flag_internal) {
-    output_min_max_angle
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info, true);
+    output_min_max_angle(mesh_data, polymesh, vertex_coord, io_info, true);
   }
 
-  output_min_max_edge_lengths(polymesh, false);
-  if (flag_internal) 
-    { output_min_max_edge_lengths(polymesh, true); }
+  io_info.flag_output_min_edge_length = true;
+  io_info.flag_output_max_edge_length = true;
+  output_min_max_edge_lengths
+    (mesh_data, polymesh, vertex_coord, io_info, false);
+  if (flag_internal) {
+    output_min_max_edge_lengths
+      (mesh_data, polymesh, vertex_coord, io_info, true);
+  }
+
+  io_info.flag_output_min_Jacobian_determinants = true;
+  io_info.flag_output_max_Jacobian_determinants = true;
+  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
+  output_min_max_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, io_info, false,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+  if (flag_internal) {
+    output_min_max_Jacobian_determinants
+      (mesh_data, polymesh, vertex_coord, io_info, true);
+  }
 
   cout << "Bounding box: (";
   IJK::print_list(cout, bounding_box.MinCoord(), bounding_box.Dimension());
@@ -736,27 +780,27 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
 }
 
 void output_min_max_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
 
   if (flag_simplex_file && mesh_dimension == DIM3) {
     output_min_max_dihedral_angle
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info, 
-       flag_internal);
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   }
 
   output_min_max_angle
-    (dimension, mesh_dimension, polymesh, vertex_coord, io_info,
-     flag_internal, 0);
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal, 0);
 
   if (flag_for_each_type) {
     for (int num_poly_edges = 3; num_poly_edges < 10; num_poly_edges++) {
       int npoly = count_num_poly(num_poly_edges);
       if (npoly > 0) {
         output_min_max_angle
-          (dimension, mesh_dimension, polymesh, vertex_coord, io_info,
+          (mesh_data, polymesh, vertex_coord, io_info, 
            flag_internal, num_poly_edges);
       }
     }
@@ -764,32 +808,32 @@ void output_min_max_angle
 
   if (flag_simplex_file && mesh_dimension == DIM3) {
     output_dihedral_angle_count
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info, 
-       flag_internal);
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
     output_tetrahedra_facet_angle_count
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info, 
-       flag_internal);
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   }
 
 }
 
 
 void output_min_max_angle
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info,
  const bool flag_internal, const int num_poly_edges)
 {
-  if (mesh_dimension == 2) {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (mesh_dimension == DIM2) {
     output_min_max_polygon_angle
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info,
+      (mesh_data, polymesh, vertex_coord, io_info, 
        flag_internal, num_poly_edges);
   }
   else if (flag_simplex_file) {
     output_min_max_tetrahedra_facet_angle
-      (dimension, mesh_dimension, polymesh, vertex_coord, io_info,
-       flag_internal);
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
   }
 }
 
@@ -797,12 +841,15 @@ void output_min_max_angle
 // Output polytopes with min/max angles or angles less then and equal to
 //   or greater than and equal to given bounds.
 void output_poly_angles
-(const int dimension, const int mesh_dimension,
+(const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
   if (flag_internal &&
-      !are_boundary_facets_identified)
+      !mesh_data.are_boundary_facets_identified)
     { identify_nonmanifold(); }
 
   if (io_info.angle_le.IsSet() || io_info.angle_ge.IsSet() ||
@@ -810,109 +857,209 @@ void output_poly_angles
       io_info.flag_output_min_angle || io_info.flag_output_max_angle) {
 
     if (io_info.angle_le.IsSet()) {
-      if (mesh_dimension == 2) {
+      if (mesh_dimension == DIM2) {
         output_polygons_with_small_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord,
-           flag_internal, io_info.angle_le.Value());
+          (mesh_data, polymesh, vertex_coord, flag_internal, 
+           io_info.angle_le.Value());
       }
-      else if (mesh_dimension == 3 && flag_simplex_file) {
+      else if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_small_dihedral_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord,
-           flag_internal, io_info.angle_le.Value());
+          (mesh_data, polymesh, vertex_coord, flag_internal, 
+           io_info.angle_le.Value());
       }
     }
     else if (io_info.flag_output_min_angle) {
-      if (mesh_dimension == 2) {
+      if (mesh_dimension == DIM2) {
         output_polygons_with_min_angle
-          (dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
-      else if (mesh_dimension == 3 && flag_simplex_file) {
+      else if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_min_dihedral_angle
-          (dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
     }
 
     if (io_info.angle_ge.IsSet()) {
-      if (mesh_dimension == 2) {
+      if (mesh_dimension == DIM2) {
         output_polygons_with_large_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord, 
-           flag_internal, io_info.angle_ge.Value());
+          (mesh_data, polymesh, vertex_coord, flag_internal, 
+           io_info.angle_ge.Value());
       }
-      else if (mesh_dimension == 3 && flag_simplex_file) {
+      else if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_large_dihedral_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord,
-           flag_internal, io_info.angle_ge.Value());
+          (mesh_data, polymesh, vertex_coord, flag_internal, 
+           io_info.angle_ge.Value());
       }
     }
     else if (io_info.flag_output_max_angle) {
-      if (mesh_dimension == 2) {
+      if (mesh_dimension == DIM2) {
         output_polygons_with_max_angle
-          (dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
-      else if (mesh_dimension == 3 && flag_simplex_file) {
+      else if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_max_dihedral_angle
-          (dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
     }
 
     if (io_info.facet_angle_le.IsSet()) {
-      if (mesh_dimension == 3 && flag_simplex_file) {
+      if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_small_facet_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord,
-           flag_internal, io_info.facet_angle_le.Value());
+          (mesh_data, polymesh, vertex_coord, flag_internal, 
+           io_info.facet_angle_le.Value());
       }
     }
     else if (io_info.flag_output_min_angle) {
-      if (mesh_dimension == 3 && flag_simplex_file) {
+      if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_min_facet_angle
-          (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
     }
 
     if (io_info.facet_angle_ge.IsSet()) {
-      if (mesh_dimension == 3 && flag_simplex_file) {
+      if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_large_facet_angles
-          (dimension, mesh_dimension, polymesh, vertex_coord,
+          (mesh_data, polymesh, vertex_coord,
            flag_internal, io_info.facet_angle_ge.Value());
       }
     }
     else if (io_info.flag_output_min_angle) {
-      if (mesh_dimension == 3 && flag_simplex_file) {
+      if (mesh_dimension == DIM3 && flag_simplex_file) {
         output_tetrahedra_with_max_facet_angle
-          (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal);
+          (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       }
     }
 
   }
-  else {
-    if (mesh_dimension == 2) {
+  else if (io_info.flag_output_all_min_max) {
+
+    if (mesh_dimension == DIM2) {
       output_polygons_with_min_max_angles
-        (dimension, polymesh, vertex_coord, flag_internal);
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
     }
-    else if (mesh_dimension == 3 && flag_simplex_file) {
+    else if (mesh_dimension == DIM3 && flag_simplex_file) {
       output_tetrahedra_with_min_max_dihedral_angles
-        (dimension, polymesh, vertex_coord, flag_internal);
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
       output_tetrahedra_with_min_max_facet_angles
-        (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal);
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
     }
   }
 }
 
 
 void output_min_max_edge_lengths
-(const POLYMESH_TYPE & polymesh, const bool flag_internal, 
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal)
+{
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (mesh_dimension == DIM2) {
+    output_min_max_polygon_edge_lengths
+      (mesh_data, polymesh, vertex_coord, flag_internal);
+  }
+  else if (flag_simplex_file) {
+    output_min_max_tetrahedra_edge_lengths
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+  }
+  else if (flag_cube_file && mesh_dimension == DIM3) {
+    output_min_max_hexahedra_edge_lengths
+      (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+  }
+}
+
+void output_poly_with_min_max_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (mesh_dimension == 2) {
+
+    if (io_info.flag_output_min_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_polygons_with_min_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+
+    if (io_info.flag_output_max_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_polygons_with_max_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+  }
+  else if (flag_simplex_file) {
+
+    if (io_info.flag_output_min_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_tetrahedra_with_min_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+
+    if (io_info.flag_output_max_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_tetrahedra_with_max_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+  }
+  else if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
+    if (io_info.flag_output_min_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_hexahedra_with_min_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+
+    if (io_info.flag_output_max_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_hexahedra_with_max_edge_lengths
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+  }
+}
+
+
+void output_poly_with_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
+    if (io_info.flag_output_min_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_hexahedra_with_min_Jacobian_determinants
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+
+    if (io_info.flag_output_max_edge_length || 
+        io_info.flag_output_all_min_max) {
+      output_hexahedra_with_max_Jacobian_determinants
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    }
+  }
+}
+
+
+void output_min_max_polygon_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, const bool flag_internal, 
  const int num_poly_edges)
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   string polyname = "polygon";
 
   if (is_mesh_dimension_set || !flag_polyfile) {
-    if (mesh_dimension == 2) {
+    if (mesh_dimension == DIM2) {
       ANGLE_TYPE min_edge_length, max_edge_length;
       compute_min_max_edge_lengths
         (polymesh, flag_internal, num_poly_edges, 
          min_edge_length, max_edge_length);
 
-      if (num_poly_edges == 3) { polyname = "triangle"; }
+      if (num_poly_edges == DIM3) { polyname = "triangle"; }
       else if (num_poly_edges == 4) { polyname = "quadrilateral"; }
       else if (num_poly_edges == 5) { polyname = "pentagon"; }
       else if (num_poly_edges == 6) { polyname = "hexagon"; }
@@ -921,14 +1068,14 @@ void output_min_max_edge_lengths
         val2string(num_poly_edges, s);
         polyname = string("polygon (") + s + " edges)"; };
 
-      if (io_info.flag_output_min_angle) {
+      if (io_info.flag_output_min_edge_length) {
         cout << "Min ";
         if (flag_internal) { cout << "internal "; }
         cout << polyname << " edge length: ";
         cout << min_edge_length << endl; 
       }
 
-      if (io_info.flag_output_max_angle) {
+      if (io_info.flag_output_max_edge_length) {
         cout << "Max ";
         if (flag_internal) { cout << "internal "; }
         cout << polyname << " edge length: ";
@@ -939,23 +1086,58 @@ void output_min_max_edge_lengths
 
 }
 
-void output_min_max_edge_lengths
-(const POLYMESH_TYPE & polymesh, const bool flag_internal)
+void output_min_max_polygon_edge_lengths
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord, const bool flag_internal)
 {
-  output_min_max_edge_lengths(polymesh, flag_internal, 0);
+  output_min_max_polygon_edge_lengths
+    (mesh_data, polymesh, vertex_coord, flag_internal, 0);
 
   if (flag_for_each_type) {
     for (int num_poly_edges = 3; num_poly_edges < 10; num_poly_edges++) {
       int npoly = count_num_poly(num_poly_edges);
       if (npoly > 0) {
-        output_min_max_edge_lengths(polymesh, flag_internal, num_poly_edges);
+        output_min_max_polygon_edge_lengths
+          (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_edges);
       }
     }
   }
 }
 
-void output_vertex_info(const int vertex_index)
+
+void output_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
+    output_min_max_hexahedra_Jacobian_determinants
+      (mesh_data, polymesh, vertex_coord, io_info,
+       flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
+  }
+}
+
+void output_min_max_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal)
+{
+  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
+
+  output_min_max_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, io_info,
+     flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void output_vertex_info(const int dimension, const int vertex_index)
+{
+  const int num_vertices = mesh_data.num_vertices;
+
   cout << "Vertex: " << vertex_index << endl;
 
   if (vertex_index < 0 || vertex_index >= num_vertices)
@@ -967,14 +1149,15 @@ void output_vertex_info(const int vertex_index)
     };
 
   cout << "  Coordinates: ";
-  IJK::print_list(cout, vertex_coord+vertex_index*dimension, dimension);
+  IJK::print_list
+    (cout, vertex_coord+vertex_index*dimension, dimension);
   cout << endl;
 
   cout << endl;
 }
 
 
-void output_simplex_info(const int simplex_index)
+void output_simplex_info(const int dimension, const int simplex_index)
 {
   const int numv_per_simplex = num_vert_per_poly;
 
@@ -990,36 +1173,26 @@ void output_simplex_info(const int simplex_index)
   for (int k = 0; k < numv_per_simplex; k++) {
     int iv = simplex_vert[simplex_index*numv_per_simplex+k];
     cout << "    " << setw(6) << iv << "  ";
-    IJK::print_list(cout, vertex_coord+iv*dimension, dimension);
+    IJK::print_list
+      (cout, vertex_coord+iv*dimension, dimension);
     cout << endl;
   }
 
   cout << endl;
 }
 
-bool coord_match(const COORD_TYPE * vertex_coord,
-                 const int iv0, const int iv1)
-{
-  const COORD_TYPE * vcoord0 = vertex_coord + iv0*dimension;
-  const COORD_TYPE * vcoord1 = vertex_coord + iv1*dimension;
-  for (int d = 0; d < dimension; d++) {
-    if (vcoord0[d] != vcoord1[d]) 
-      { return(false); }
-  }
-
-  return(true);
-}
-
 
 void output_manifold_info()
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
   const char * poly_str = "polytopes";
   const char * facet_str = "facets";
   bool flag_newline(false);
 
-  if (mesh_dimension == 2) { 
+  if (mesh_dimension == DIM2) { 
     poly_str = "polygons"; 
     facet_str = "edges";
   }
@@ -1059,10 +1232,10 @@ void output_manifold_info()
     }
   }
 
-  if (mesh_dimension == 2 || flag_simplex_file || flag_cube_file) {
+  if (mesh_dimension == DIM2 || flag_simplex_file || flag_cube_file) {
 
     int numv_per_facet;
-    if (mesh_dimension == 2 || flag_simplex_file) 
+    if (mesh_dimension == DIM2 || flag_simplex_file) 
       { numv_per_facet = mesh_dimension;  }
     else 
       { numv_per_facet = NUMV_PER_CUBE_FACET; }
@@ -1088,7 +1261,7 @@ void output_manifold_info()
     }
 
     if (flag_cube_file && mesh_dimension > 2) {
-      // If mesh_dimension == 2, then edges are reported as facets.
+      // If mesh_dimension == DIM2, then edges are reported as facets.
       // Non-manifold edge detection only implemented for cubes.
 
       if (mesh_info.num_nonmanifold_edges == 0) {
@@ -1119,7 +1292,7 @@ void output_manifold_info()
     else {
       if (!flag_newline && !terse_flag) { cout << endl; }
 
-      int num_deep = count_deep_vertices(nonmanifold_vert_list);
+      int num_deep = count_deep_vertices(dimension, nonmanifold_vert_list);
       cout << "Num non-manifold vertices:  " 
            << mesh_info.num_nonmanifold_vertices << endl;
 
@@ -1157,8 +1330,7 @@ void output_manifold_info()
       }
     }
 
-    if (mesh_dimension < dimension)
-      { output_internal_boundary_facets(); }
+    if (mesh_dimension < dimension) { output_internal_boundary_facets(); }
   }
   else {
     if (!terse_flag) {
@@ -1173,18 +1345,20 @@ void output_manifold_info()
 
 void output_nonmanifold_facets()
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
   const char * poly_str = "Polytopes";
   const char * facet_str = "facets";
   int numv_per_facet = mesh_dimension;
 
-  if (mesh_dimension == 2 || flag_simplex_file) 
+  if (mesh_dimension == DIM2 || flag_simplex_file) 
     { numv_per_facet = mesh_dimension;  }
   else 
     { numv_per_facet = NUMV_PER_CUBE_FACET; }
 
-  if (mesh_dimension == 2) {
+  if (mesh_dimension == DIM2) {
     poly_str = "Polygons";
     facet_str = "edges"; 
   }
@@ -1274,6 +1448,7 @@ void output_poly_with_orientation_conflicts()
 
 void output_internal_boundary_facets()
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   int numv_per_facet;
   IJK::PROCEDURE_ERROR error("output_internal_boundary_facet");
 
@@ -1284,7 +1459,7 @@ void output_internal_boundary_facets()
   else if (flag_simplex_file) {
     numv_per_facet = mesh_dimension;
   }
-  else if (mesh_dimension == 2) {
+  else if (mesh_dimension == DIM2) {
     numv_per_facet = 2;
   }
   else {
@@ -1410,6 +1585,8 @@ bool intersect_triangle_triangle
 
 bool output_self_intersections()
 {
+  const int dimension = mesh_data.dimension;
+
   COORD_TYPE intersection_point[DIM3];
 
   if (dimension != DIM3) { return(false); }
@@ -1555,10 +1732,13 @@ bool output_self_intersections_using_grid_of_bins()
 
 void output_manifold_and_boundary_counts()
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int numv_per_facet = mesh_dimension;
   const int num_nonmanifold_facets = 
     nonmanifold_facet_vert.size()/numv_per_facet;
-  const int num_deep_vertices = count_deep_vertices(nonmanifold_vert_list);
+  const int num_deep_vertices = 
+    count_deep_vertices(dimension, nonmanifold_vert_list);
 
   cout << nonmanifold_vert_list.size() << " "
        << num_deep_vertices << " "
@@ -1570,11 +1750,14 @@ void output_manifold_and_boundary_counts()
 
 void write_nonmanifold_edges()
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  const int num_vertices = mesh_data.num_vertices;
   const int numv_per_facet = mesh_dimension;
   const int num_nonmanifold_edges =
     nonmanifold_facet_vert.size()/numv_per_facet;
 
-  if (mesh_dimension != 2) {
+  if (mesh_dimension != DIM2) {
     cerr << "Only able to write non-manifold edges for mesh dimension two."
          << endl;
     return;
@@ -1624,20 +1807,21 @@ bool region_contains
 
 void output_vertex_list()
 {
+  const int dimension = mesh_data.dimension;
+  const int num_vertices = mesh_data.num_vertices;
+
   for (int iv = 0; iv < num_vertices; iv++) {
 
     const COORD_TYPE * vcoord = vertex_coord + iv*dimension;
 
     if (is_min_coord_set) {
-      if (!region_contains
-          (dimension, vcoord, &(min_coord[0]))) {
+      if (!region_contains(dimension, vcoord, &(min_coord[0]))) {
         continue;
       }
     }
 
     if (is_max_coord_set) {
-      if (!region_contains
-          (dimension, &(max_coord[0]), vcoord)) {
+      if (!region_contains(dimension, &(max_coord[0]), vcoord)) {
         continue;
       }
     }
@@ -1697,6 +1881,8 @@ bool poly_contains_vertex
 
 void output_simplices()
 {
+  const int num_vertices = mesh_data.num_vertices;
+
   if (contains_vertex_flag) {
     if (contains_vertex_index < 0 || contains_vertex_index >= num_vertices)
       {
@@ -1761,6 +1947,8 @@ void output_simplices()
 
 void output_polytopes()
 {
+  const int num_vertices = mesh_data.num_vertices;
+
   if (contains_vertex_flag) {
     if (contains_vertex_index < 0 || contains_vertex_index >= num_vertices)
       {
@@ -1863,6 +2051,9 @@ void write_table_gplt(ofstream & ofile, const TABLE_TYPE & table)
 
 void compute_bounding_box()
 {
+  const int dimension = mesh_data.dimension;
+  const int num_vertices = mesh_data.num_vertices;
+
   bounding_box.SetDimension(dimension);
 
   if (num_vertices < 1) {
@@ -1941,13 +2132,14 @@ int compute_num_edges()
 // Compute facet information
 void compute_facet_info()
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
 
   compute_bounding_box();
   if (flag_simplex_file || mesh_dimension == 2) {
-    if (!are_nonmanifold_facets_identified || 
-        !are_boundary_facets_identified) 
+    if (!mesh_data.are_nonmanifold_facets_identified || 
+        !mesh_data.are_boundary_facets_identified) 
       { identify_nonmanifold_and_boundary_facets(); }
 
     const int num_vert_per_facet = mesh_dimension;
@@ -1956,8 +2148,8 @@ void compute_facet_info()
   }
   else if (flag_cube_file) {
 
-    if (!are_nonmanifold_facets_identified || 
-        !are_boundary_facets_identified) 
+    if (!mesh_data.are_nonmanifold_facets_identified || 
+        !mesh_data.are_boundary_facets_identified) 
       { identify_nonmanifold_and_boundary_facets(); }
 
     mesh_info.num_nonmanifold_facets =
@@ -1984,10 +2176,10 @@ void compute_min_max_polygon_edge_length_squared
 /// Compute min/max edge lengths.
 /// Skip polygons with duplicate vertices.
 /// @param flag_internal If true, compute edge lengths for interior polygons.
-/// @param num_poly_edges If num_poly_edges > 0, compute angles only
+/// @param num_poly_edges If num_poly_edges > 0, compute edge lengths only
 ///          for polygons with num_poly_edges.
-/// @param num_poly_edges If num_poly_edges = 0, compute angles 
-///          for all polygons
+/// @param num_poly_edges If num_poly_edges = 0, compute edge lengths
+///          for all polygons.
 /// @pre mesh_dimension == 2.
 void compute_min_max_edge_lengths
 (const POLYMESH_TYPE & polymesh,
@@ -1995,6 +2187,7 @@ void compute_min_max_edge_lengths
  ANGLE_TYPE & min_edge_length, ANGLE_TYPE & max_edge_length,
  int & poly_with_min_edge_length, int & poly_with_max_edge_length)
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   COORD_TYPE min_length_squared, max_length_squared;
   bool is_length_set;
   IJK::PROCEDURE_ERROR error("compute_min_max_edge_lengths");
@@ -2005,7 +2198,7 @@ void compute_min_max_edge_lengths
     throw error;
   }
 
-  if (flag_internal && !are_boundary_facets_identified) {
+  if (flag_internal && !mesh_data.are_boundary_facets_identified) {
     error.AddMessage("Programming error.  Need to compute boundary facets.");
     throw error;
   }
@@ -2081,19 +2274,21 @@ void compute_min_max_polygon_edge_length_squared
  const int ipoly, COORD_TYPE & min_edge_length_squared, 
  COORD_TYPE & max_edge_length_squared, int & num_edge)
 {
+  const int dimension = mesh_data.dimension;
   COORD_TYPE edge_length_squared;
 
   min_edge_length_squared = 0;
   max_edge_length_squared = 0;
-  num_edges = 0;
   // Ignore degenerate polygons with 1 or 2 vertices.
   if (polymesh.NumPolyVert(ipoly) > 2) {
     int nv = polymesh.NumPolyVert(ipoly);
 
     for (int i0 = 0; i0 < nv; i0++) {
       int i1 = (i0+1)%nv;
-      const COORD_TYPE * v0 = vertex_coord+polymesh.Vertex(ipoly,i0)*dimension;
-      const COORD_TYPE * v1 = vertex_coord+polymesh.Vertex(ipoly,i1)*dimension;
+      const COORD_TYPE * v0 = 
+        vertex_coord+polymesh.Vertex(ipoly,i0)*dimension;
+      const COORD_TYPE * v1 = 
+        vertex_coord+polymesh.Vertex(ipoly,i1)*dimension;
 
       IJK::compute_distance_squared(dimension, v0, v1, edge_length_squared);
 
@@ -2206,6 +2401,9 @@ int identify_duplicate_polytopes()
 
 void identify_nonmanifold()
 {
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
   if (flag_simplex_file || mesh_dimension == 2 || flag_cube_file) {
     compute_facet_info();
 
@@ -2217,7 +2415,7 @@ void identify_nonmanifold()
     mesh_info.num_nonmanifold_vertices = 
       identify_nonmanifold_vertices();
     mesh_info.num_deep_nonmanifold_vertices = 
-      count_deep_vertices(nonmanifold_vert_list);
+      count_deep_vertices(dimension, nonmanifold_vert_list);
   }
 }
 
@@ -2256,6 +2454,8 @@ void store_polygon_edges
 
 void set_in_nonmanifold_facet()
 {
+  const int num_vertices = mesh_data.num_vertices;
+
   // initialize in_nonmanifold_facet[iv] to false for all vertices iv
   in_nonmanifold_facet.assign(num_vertices, false);
 
@@ -2268,6 +2468,8 @@ void set_in_nonmanifold_facet()
 
 void set_in_nonmanifold_edge()
 {
+  const int num_vertices = mesh_data.num_vertices;
+
   // initialize in_nonmanifold_edge[iv] to false for all vertices iv
   in_nonmanifold_edge.assign(num_vertices, false);
 
@@ -2331,6 +2533,7 @@ void add_simplex_facets
  POLYMESH_TYPE & polymesh_facets,
  FACET_INFO_ARRAY & facet_info)
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int num_facets_per_simplex = mesh_dimension+1;
   const int num_vert_per_simplex = mesh_dimension+1;
   const int num_vert_per_facet = mesh_dimension;
@@ -2390,6 +2593,7 @@ void add_poly_facets
  POLYMESH_TYPE & polymesh_facets,
  FACET_INFO_ARRAY & facet_info)
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   IJK::PROCEDURE_ERROR error("add_poly_facets");
 
   // ignore degenerate polytopes and duplicate polytopes
@@ -2547,6 +2751,7 @@ bool does_polytope_orientation_match
  const CUBE_TYPE & cube)
 {
   const int DIM3(3);
+  const int mesh_dimension = mesh_data.mesh_dimension;
   IJK::PROCEDURE_ERROR error("does_polytope_orientation_match");
 
   if (mesh_dimension == 2) {
@@ -2573,6 +2778,7 @@ bool does_polytope_orientation_match
 // A facet is boundary if it is in only one polytope.
 void identify_nonmanifold_and_boundary_facets()
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
   const int NUM_FACETS_PER_CUBE = 6;
@@ -2693,14 +2899,15 @@ void identify_nonmanifold_and_boundary_facets()
     k0 = k1;
   }
 
-  are_boundary_facets_identified = true;
-  are_nonmanifold_facets_identified = true;
+  mesh_data.are_boundary_facets_identified = true;
+  mesh_data.are_nonmanifold_facets_identified = true;
   set_in_nonmanifold_facet();
 }
 
 
 // Return number of deep vertices in list
-int count_deep_vertices(const std::vector<int> & vlist)
+int count_deep_vertices
+(const int dimension, const std::vector<int> & vlist)
 {
   int count = 0;
   for (int i = 0; i < vlist.size(); i++) {
@@ -2715,6 +2922,7 @@ int count_deep_vertices(const std::vector<int> & vlist)
 bool are_simplices_adjacent(int ks, int js)
 // return true if simplices ks and js share facet
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int numv_per_simplex = num_vert_per_poly;
   const int numv_per_facet = mesh_dimension;
   int jfacet_vert[numv_per_simplex];
@@ -2812,6 +3020,7 @@ bool are_hexahedra_adjacent(int ihexA, int ihexB)
 bool are_poly_adjacent(int kpoly, int jpoly)
 // return true if polytopes kpoly and jpoly share facet
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   IJK::PROCEDURE_ERROR error("are_poly_adjacent");
 
@@ -2950,6 +3159,8 @@ void compute_boundary_edges
 /// Identify non-manifold vertices.
 int identify_nonmanifold_vertices()
 {
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  const int num_vertices = mesh_data.num_vertices;
   const int NUMV_PER_CUBE = 8;
   IJK::PROCEDURE_ERROR error("identify_nonmanifold_vertices");
 
@@ -3051,6 +3262,8 @@ int identify_nonmanifold_vertices()
 /// Identify non-manifold vertices in mesh of 2D polygons.
 void identify_nonmanifold_vertices_in_dim2_mesh()
 {
+  const int num_vertices = mesh_data.num_vertices;
+
   nonmanifold_vert_list.clear();
 
   // initialize in_nonmanifold_facet[iv] to false for all vertices iv
@@ -3104,6 +3317,7 @@ void identify_nonmanifold_vertices_in_dim2_mesh()
 /// Identify non-manifold edges
 int identify_nonmanifold_edges()
 {
+  const int num_vertices = mesh_data.num_vertices;
   const int NUMV_PER_CUBE = 8;
   const CUBE_TYPE cube(DIM3);
   std::vector<int> poly_list;
@@ -3201,6 +3415,8 @@ bool is_internal(const BOUNDING_BOX & bounding_box,
                  const int numv_per_facet,
                  const int jf)
 {
+  const int dimension = mesh_data.dimension;
+
   for (int d = 0; d < dimension; d++) {
     COORD_TYPE minc = bounding_box.MinCoord(d);
     COORD_TYPE maxc = bounding_box.MaxCoord(d);
@@ -3226,6 +3442,8 @@ bool is_internal(const BOUNDING_BOX & bounding_box,
 
 void compute_polygon_angles(ANGLE_TABLE & angle_table)
 {
+  const int dimension = mesh_data.dimension;
+
   ANGLE_TYPE min_angle, max_angle;
   int num_angle;
 
@@ -3556,6 +3774,24 @@ bool MESH_INFO::AreAllZero() const
 
 
 // **************************************************
+// Class MESH_DATA member functions
+// **************************************************
+
+void MESH_DATA::Init()
+{
+  dimension = DIM3;
+  mesh_dimension = DIM2;
+  num_vertices = 0;
+
+  are_boundary_facets_identified = false;
+  are_nonmanifold_facets_identified = false;
+
+  // Default to positive orientation.
+  orientation = 1;
+}
+
+
+// **************************************************
 // Class GRID_OF_BINS_3D
 // **************************************************
 
@@ -3829,47 +4065,51 @@ void parse_command_line(int argc, char **argv)
         break;
 
       case MESH_DIM_PARAM:
-        mesh_dimension = get_arg_int(iarg, argc, argv, error);
+        mesh_data.mesh_dimension = get_arg_int(iarg, argc, argv, error);
         is_mesh_dimension_set = true;
         iarg++;
+        break;
+
+      case REVERSE_ORIENT_PARAM:
+        mesh_data.orientation = -1;
         break;
 
       case VERTEX_PARAM:
         vertex_index = get_arg_int(iarg, argc, argv, error);
         iarg++;
         vertex_info_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case SIMPLEX_PARAM:
         simplex_index = get_arg_int(iarg, argc, argv, error);
         iarg++;
         simplex_info_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case POLY_PARAM:
         poly_index = get_arg_int(iarg, argc, argv, error);
         iarg++;
         poly_info_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case VLIST_PARAM:
         vlist_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case PLIST_PARAM:
         plist_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case CONTAINSV_PARAM:
         contains_vertex_index = get_arg_int(iarg, argc, argv, error);
         iarg++;
         contains_vertex_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case CONTAINSE_PARAM:
@@ -3880,30 +4120,30 @@ void parse_command_line(int argc, char **argv)
         if (iarg >= argc) usage_error();
         sscanf(argv[iarg], "%d", &edge_end1_index);
         contains_edge_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case MANIFOLD_PARAM:
         manifold_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case ORIENTED_MANIFOLD_PARAM:
         manifold_flag = true;
         oriented_manifold_flag = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case SELFI_PARAM:
         flag_report_self_intersections = true;
         flag_use_grid_of_bins = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case SELFI_NO_GRID_PARAM:
         flag_report_self_intersections = true;
         flag_use_grid_of_bins = false;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case GRID_LENGTH_PARAM:
@@ -3988,12 +4228,12 @@ void parse_command_line(int argc, char **argv)
 
       case OUT_MIN_ANGLE_PARAM:
         io_info.flag_output_min_angle = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case OUT_MAX_ANGLE_PARAM:
         io_info.flag_output_max_angle = true;
-        general_info_flag = false;
+        io_info.flag_general_info = false;
         break;
 
       case PLOT_ANGLES_PARAM:
@@ -4004,6 +4244,12 @@ void parse_command_line(int argc, char **argv)
 
       case FOR_EACH_TYPE_PARAM:
         flag_for_each_type = true;
+        break;
+
+      case MAX_OUT_PARAM:
+        iarg++;
+        if (iarg >= argc) usage_error();
+        sscanf(argv[iarg], "%d", &io_info.max_num_poly_out);
         break;
 
       case TERSE_PARAM:
@@ -4078,6 +4324,13 @@ void parse_command_line(int argc, char **argv)
       exit(20);
     }
   }
+
+  if (!io_info.flag_output_min_angle && !io_info.flag_output_max_angle &&
+      !io_info.angle_le.IsSet() && !io_info.angle_ge.IsSet() &&
+      !io_info.facet_angle_le.IsSet() && !io_info.facet_angle_ge.IsSet() &&
+      !io_info.flag_output_min_edge_length && 
+      !io_info.flag_output_max_edge_length) 
+    { io_info.flag_output_all_min_max = true; }
 }
 
 void check_input()
