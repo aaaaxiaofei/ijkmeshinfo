@@ -214,7 +214,54 @@ namespace IJK {
   bool does_list_contain
   (const std::vector<T1> & list, const T2 el)
   {
-    return(does_list_contain(&list.front(), list.size(), el));
+    return(does_list_contain(vector2pointer(list), list.size(), el));
+  }
+
+
+  /// Return true if listA and listB contain a common element.
+  /// @param[out] ilocA Location (index) of common element in listA.
+  /// ilocA is undefined if listA does not contain any element of listB.
+  /// @param[out] ilocB Location (index) of common element in listB.
+  /// ilocB is undefined if listA does not contain any element of listB.
+  template <typename TA, typename TB, typename NTYPEA, typename NTYPEB,
+            typename ITYPEA, typename ITYPEB>
+  bool do_lists_intersect
+  (const TA * listA, const NTYPEA listA_length,
+   const TB * listB, const NTYPEB listB_length,
+   ITYPEA & ilocA, ITYPEB & ilocB)
+  {
+    for (ilocB = 0; ilocB < listB_length; ilocB++) {
+      if (does_list_contain(listA, listA_length, listB[ilocB], ilocA)) 
+        { return(true); }
+    }
+
+    return(false);
+  }
+
+
+  /// Return true if listA and listB contain a common element.
+  /// - Version which does not return location of ilocA or ilocB.
+  template <typename TA, typename TB, typename NTYPEA, typename NTYPEB>
+  bool do_lists_intersect
+  (const TA * listA, const NTYPEA listA_length,
+   const TB * listB, const NTYPEB listB_length)
+  {
+    NTYPEA ilocA;
+    NTYPEB ilocB;
+
+    return(do_lists_intersect
+           (listA, listA_length, listB, listB_length, ilocA, ilocB));
+  }
+
+  /// Return true if listA and listB contain a common element.
+  /// - Version which does not return location of ilocA or ilocB.
+  /// - Version where listB is a C++ vector.
+  template <typename TA, typename TB, typename NTYPEA>
+  bool do_lists_intersect
+  (const TA * listA, const NTYPEA listA_length, const std::vector<TB> & listB)
+  {
+    return(do_lists_intersect
+           (listA, listA_length, vector2pointer(listB), listB.size()));
   }
 
 
@@ -283,7 +330,27 @@ namespace IJK {
     for (NTYPE i = 0; i < list_length; i++)
       { v.push_back(list[i]); }
   }
-                
+
+
+  /// Add element to a list.  Store overflow if list is full.
+  /// @param[out] overflow_list Pairs of list indices and elements
+  ///    where element could not be add to list.
+  template <typename ITYPE, typename ETYPE0, typename ETYPE1,
+            typename NTYPE0, typename NTYPE1>
+  void add_to_list_store_overflow
+  (const ITYPE ilist, const ETYPE0 element, ETYPE1 * const list,
+   NTYPE0 & num_elements_in_list, const NTYPE1 max_num_elements_in_list, 
+   std::vector<std::pair<ITYPE,ETYPE0>> & overflow_list)
+  {
+    if (num_elements_in_list < max_num_elements_in_list) {
+      list[num_elements_in_list] = element;
+      num_elements_in_list++;
+    }
+    else {
+      overflow_list.push_back(std::pair<ITYPE,ETYPE0>(ilist,element));
+    }
+  }
+
 
   // **************************************************
   // Class LIST_OF_LISTS
@@ -354,8 +421,8 @@ namespace IJK {
     }
 
     /// Return true if ilistA equals ilistB.
-    /// - Lists are equal only if lists have same length and ilistA[k] = ilistB[k]
-    ///   for every k.
+    /// - Lists are equal only if lists have same length 
+    ///   and ilistA[k] = ilistB[k] for every k.
     bool AreListsEqual(const NTYPE ilistA, const NTYPE ilistB) const;
 
     /// Count number of distinct elements in list ilist.
@@ -383,6 +450,11 @@ namespace IJK {
     /// Set number of lists.
     template <typename NTYPE2>
     void SetNumLists(const NTYPE2 num_lists);
+
+    /// Set all list lengths to L.
+    /// @pre SetNumLists() must be called before SetListLengths().
+    template <typename NTYPE2>
+    void SetListLengths(const NTYPE2 L);
 
     /// Set array first_element[].
     /// @pre Array list_length[] is set.
@@ -553,6 +625,16 @@ namespace IJK {
     list_length.assign(num_lists, 0);
     first_element.resize(num_lists);
     element.clear();
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename NTYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  SetListLengths(const NTYPE2 L)
+  {
+    for (NTYPE2 i = 0; i < NumLists(); i++) 
+      { list_length[i] = L; }
   }
 
 

@@ -59,6 +59,12 @@ namespace IJKMESHINFO {
   VERTEX_POLY_INCIDENCE_TYPE;
   typedef typename IJK::CUBE_FACE_INFO<int,int,int> CUBE_TYPE;
 
+  typedef typename IJK::FACE_INFO_BASE<int,int> FACET_INFO;
+  typedef std::vector<FACET_INFO> FACET_INFO_ARRAY;
+  typedef std::pair<FACET_INFO,FACET_INFO> FACET_INFO_PAIR;
+
+  typedef std::vector<FACET_INFO_PAIR> FACET_INFO_PAIRS_ARRAY;
+
 
   // **************************************************
   // Class POLY_DATA
@@ -145,6 +151,7 @@ namespace IJKMESHINFO {
     int num_nonmanifold_vertices;
     int num_deep_nonmanifold_vertices;
     int num_poly_with_orientation_conflicts;
+    int num_hex_facet_pairs_sharing_exactly_two_edges;
 
     /// Return true if all non-manifold numbers are zero.
     bool AreAllNonManifoldZero() const;
@@ -177,6 +184,9 @@ namespace IJKMESHINFO {
     /// True if nonmanifold facets have been identified.
     bool are_nonmanifold_facets_identified;
 
+    /// True if hex sharing exactly two facets edges have been identified.
+    bool are_hex_sharing_exactly_two_facet_edges_identified;
+
   public:
     MESH_DATA() { Init(); }
 
@@ -188,22 +198,7 @@ namespace IJKMESHINFO {
   };
 
 
-  // **************************************************
-  // Class FACET_INFO
-  // **************************************************
 
-  class FACET_INFO {
-  public:
-    int poly_containing_facet;
-    int facet_index;
-
-  public:
-    FACET_INFO() {};
-    FACET_INFO(const int ipoly, const int jf)
-    { poly_containing_facet = ipoly, facet_index = jf; }
-  };
-
-  typedef std::vector<FACET_INFO> FACET_INFO_ARRAY;
 
 
   // **************************************************

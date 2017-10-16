@@ -149,6 +149,9 @@ namespace IJK {
   template <typename VTYPE, typename NTYPE, typename POLYDATA_TYPE>
   class POLYMESH_DATA:public POLYMESH<VTYPE,NTYPE> {
 
+  public:
+    typedef typename POLYMESH<VTYPE,NTYPE>::NUMBER_TYPE NUMBER_TYPE;
+
   protected:
     void ResizePolyData(const NTYPE k)
     { const NTYPE num_poly = this->NumPoly(); poly_data.resize(num_poly+k); }
@@ -192,6 +195,9 @@ namespace IJK {
     void AddPolytopes(const std::vector<VTYPE2> & poly_vert_list, 
                       const NTYPE num_vert_per_poly);
 
+    /// Set polymesh data from polymesh.
+    template <typename VTYPE2, typename NTYPE2>
+    void Set(const POLYMESH<VTYPE2,NTYPE2> & polymesh);
 
     // Check functions.
 
@@ -226,9 +232,9 @@ namespace IJK {
   //   VERTEX_POLY_INCIDENCE
   // **************************************************
 
-  /// List of polytopes incident on each vertex. Base class.
+  /// \brief List of polytopes incident on each vertex. Base class.
   /// @tparam ETYPE List element type.
-  ///   Usually derived from VERTEX_POLY_INCIDENCE_ELEMENT
+  ///    Usually derived from VERTEX_POLY_INCIDENCE_ELEMENT.
   /// @tparam NTYPE Number type.
   template <typename ETYPE, typename NTYPE>
   class VERTEX_POLY_INCIDENCE_BASE:protected LIST_OF_LISTS<ETYPE,NTYPE> {
@@ -313,7 +319,7 @@ namespace IJK {
     void Clear();
   };
 
-  /// List of polytopes incident on each vertex.
+  /// \brief List of polytopes incident on each vertex.
   /// @tparam PTYPE Polytope index type.
   /// @tparam NTYPE Number type.
   template <typename PTYPE, typename NTYPE>
@@ -357,7 +363,7 @@ namespace IJK {
   //   VERTEX_ADJACENCY_LIST.
   // **************************************************
 
-  /// List of vertices adjacent to each vertex. Base class.
+  /// \brief List of vertices adjacent to each vertex. Base class.
   /// @tparam ETYPE List element type.
   ///   Usually derived from VERTEX_ADJACENCY_LIST_ELEMENT.
   /// @tparam NTYPE Number type.
@@ -410,7 +416,7 @@ namespace IJK {
     template <typename NTYPE2>
     void SetNumVertices(const NTYPE2 num_vertices);
 
-    /// Set adjaceny list from mesh of 2D polygons.
+    /// Set adjacency list from mesh of 2D polygons.
     /// @param polymesh Mesh of 2D polygons.
     ///   - Polygon vertices are listed in clockwise or counter-clockwise
     ///     order around the polygon.
@@ -431,7 +437,7 @@ namespace IJK {
     void Clear();
   };
 
-  /// List of vertices adjacent to each vertex.
+  /// \brief List of vertices adjacent to each vertex.
   /// @tparam VTYPE Vertex type.
   /// @tparam NTYPE Number type.
   template <typename VTYPE, typename NTYPE>
@@ -445,13 +451,185 @@ namespace IJK {
 
 
   // **************************************************
+  // Class POLYMESH_ADJACENCY
+  // **************************************************
+
+  template <typename PTYPE>
+  class ADJACENT_POLY {
+
+  public:
+    /// Polytope index type.
+    typedef PTYPE POLY_INDEX_TYPE;
+
+  public:
+    /// Index of adjacent polytope.
+    PTYPE poly;
+
+    /// True if poly is set, i.e., poly is adjacent across corresponding facet.
+    bool is_adjacent;
+
+  public:
+    ADJACENT_POLY()
+    { is_adjacent = false; }
+
+    template <typename PTYPE2>
+    void SetPoly(const PTYPE2 poly)
+    {
+      this->poly = poly;
+      is_adjacent = true;
+    }
+  };
+
+
+  template <typename PTYPE, typename FTYPE>
+  class ADJACENT_POLY_FACET:public ADJACENT_POLY<PTYPE> {
+
+  public:
+    /// Polytope facet index type.
+    typedef FTYPE FACET_INDEX_TYPE;
+
+  public:
+    /// Index of facet of adjacent polytope.
+    FTYPE facet;
+
+    template <typename PTYPE2, typename FTYPE2>
+    void SetPolyFacet(const PTYPE2 poly, const FTYPE2 facet)
+    {
+      this->poly = poly;
+      this->facet = facet;
+      this->is_adjacent = true;
+    }
+
+    // Undefine SetPoly
+    template <typename PTYPE2>
+    void SetPoly(const PTYPE2 poly);
+  };
+
+  /// Polytopes adjacent to each polytope facet.
+  template <const int MAX_NUM_FACETS, typename ADJACENT_POLY_FACET_TYPE,
+            typename NTYPE>
+  class POLYMESH_ADJACENCY_BASE:
+    public LIST_OF_LISTS<ADJACENT_POLY_FACET_TYPE,NTYPE> {
+
+  public:
+
+    /// Polytope index type.
+    typedef typename ADJACENT_POLY_FACET_TYPE::POLY_INDEX_TYPE POLY_INDEX_TYPE;
+
+    /// NUMBER type.
+    typedef NTYPE NUMBER_TYPE;
+
+  public:
+    /// constructor
+    POLYMESH_ADJACENCY_BASE(){};
+
+    /// Number of polytopes.
+    NTYPE NumPoly() const               
+    { return(this->NumLists()); }
+
+    /// Max number of facets.
+    NTYPE MaxNumFacets() const
+    { return(MAX_NUM_FACETS); }
+
+    /// Return true if some polytope shares facet jfacet with poly ipoly.
+    template <typename PTYPE2, typename FTYPE>
+    bool IsAdjacent(const PTYPE2 ipoly, const FTYPE jfacet) const
+    { return(this->element[this->ElementIndex(ipoly, jfacet)].is_adjacent); }
+
+    /// Return j'th poly adjacent to polytope ipoly.
+    /// - Undefined if IsAdjacent(ipoly, jfacet) is false.
+    template <typename PTYPE2, typename FTYPE>
+    POLY_INDEX_TYPE AdjacentPoly(const PTYPE2 ipoly, const FTYPE jfacet) const
+    { return(this->element[this->ElementIndex(ipoly, jfacet)].poly); }
+
+    /// Return facet of j'th poly adjacent to polytope ipoly.
+    /// - Undefined if IsAdjacent(ipoly, jfacet) is false.
+    template <typename PTYPE2, typename FTYPE>
+    POLY_INDEX_TYPE AdjacentPolyFacet
+    (const PTYPE2 ipoly, const FTYPE jfacet) const
+    { return(this->element[this->ElementIndex(ipoly, jfacet)].facet); }
+
+    /// Set adjacency poly from mesh of (hyper) cubes.
+    /// @pre Each facet is contained in at most two (hyper) cubes.
+    /// @pre Each (hyper) cube facets has 2d distinct facets 
+    ///   (where d is cube dimension).
+    /// @param polymesh Mesh of (hyper) cubes.
+    ///   - Cube vertices are listed in order:
+    ///     (0,0,0), (1,0,0), (0,1,0), (1,1,0), 
+    ///     (0,0,1), (1,0,1), (0,1,1), (1,1,1).
+    template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+    void SetFromMeshOfCubes
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+     const CUBE_TYPE & cube);
+  };
+
+  /// Polytopes adjacent to each polytope facet.
+  template <typename PTYPE, typename FTYPE, typename NTYPE>
+  class HEXMESH_ADJACENCY:
+    public POLYMESH_ADJACENCY_BASE<6, ADJACENT_POLY_FACET<PTYPE,FTYPE>, 
+                                   NTYPE> 
+  {
+  };
+
+
+  // **************************************************
+  // Class POLYMESH_ADJACENCY_LISTS
+  // **************************************************
+
+  /// Lists of adjacent polytopes for each polytope in mesh.
+  /// - Note: This is not derived from or related to POLYMESH_ADJACENCY.
+  /// This is a totally different class which stores polymesh adjacency
+  ///   as unordered lists with no facet information.
+  template <typename PTYPE, typename NTYPE>
+  class POLYMESH_ADJACENCY_LISTS:public LIST_OF_LISTS<PTYPE,NTYPE> {
+
+  public:
+
+    /// Polytope index type.
+    typedef PTYPE POLY_INDEX_TYPE;
+
+    /// NUMBER type.
+    typedef NTYPE NUMBER_TYPE;
+
+  public:
+    /// constructor
+    POLYMESH_ADJACENCY_LISTS(){};
+
+    /// Number of polytopes.
+    NTYPE NumPoly() const               
+    { return(this->NumLists()); }
+
+    /// Number of polytopes adjacent to polytope i.
+    NTYPE NumAdjacentPoly(const NTYPE ipoly) const
+    { return(this->ListLength(ipoly)); }
+
+    /// Return j'th poly adjacent to polytope ipoly.
+    template <typename PTYPE2, typename NTYPE2>
+    PTYPE AdjacentPoly(const PTYPE2 ipoly, const NTYPE2 j) const
+    { return(this->Element(ipoly,j)); }
+
+    /// Set adjacency poly from mesh of (hyper) cubes.
+    /// @param polymesh Mesh of (hyper) cubes.
+    ///   - Cube vertices are listed in order:
+    ///     (0,0,0), (1,0,0), (0,1,0), (1,1,0), 
+    ///     (0,0,1), (1,0,1), (0,1,1), (1,1,1).
+    template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+    void SetFromMeshOfCubes
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+     const CUBE_TYPE & cube);
+  };
+
+
+  // **************************************************
   // Class VERTEX_POLY_EDGE_INCIDENCE
   // **************************************************
 
-  /// List of polytopes incident on each vertex.
-  /// List of vertices adjacent to each vertex.
-  /// For each poly ipoly incident on vertex iv, list of edges
-  ///   incident on ipoly and iv.
+  /// \brief List of edges incident on given polytope and vertex.
+  /// 
+  /// - List of polytopes incident on each vertex.
+  /// - List of vertices adjacent to each vertex.
+  /// - For each poly ipoly incident on vertex iv, list of edges
+  ///     incident on ipoly and iv.
   /// @tparam VP_ELEMENT_TYPE Element type for vertex poly incidence list.
   ///   Class VP_ELEMENT_TYPE must include member functions SetPolyIndex(),
   ///     first_edge and num_edges and type POLY_INDEX_TYPE.
@@ -562,11 +740,138 @@ namespace IJK {
 
 
   // **************************************************
+  // Class FACE_INFO_BASE
+  // **************************************************
+
+  /// Face information.
+  /// @tparam PINDEX_TYPE Polytope index type.
+  /// @tparam FINDEX_TYPE Face index type.
+  template <typename PINDEX_TYPE, typename FINDEX_TYPE>
+  class FACE_INFO_BASE {
+
+  public:
+    typedef PINDEX_TYPE POLY_INDEX_TYPE;
+    typedef FINDEX_TYPE FACE_INDEX_TYPE;
+
+  public:
+    PINDEX_TYPE poly_containing_face;
+    FINDEX_TYPE face_index;
+
+  public:
+    FACE_INFO_BASE() {};
+    template <typename PTYPE2, typename FTYPE2>
+    FACE_INFO_BASE(const PTYPE2 ipoly, const FTYPE2 jface)
+    { poly_containing_face = ipoly; face_index = jface; }
+  };
+
+
+  // **************************************************
+  // Class FACE_LIST_BASE
+  // **************************************************
+
+  /// List of face information.
+  /// - Note: A face which appears in k polytopes will usually appear
+  ///   k times in the face list.
+  template <typename VTYPE, typename NTYPE, typename FACE_INFO_TYPE>
+  class FACE_LIST_BASE:public POLYMESH_DATA<VTYPE,NTYPE,FACE_INFO_TYPE>
+  {
+
+  public:
+    typedef typename FACE_INFO_TYPE::POLY_INDEX_TYPE POLY_INDEX_TYPE;
+    typedef typename FACE_INFO_TYPE::FACE_INDEX_TYPE FACE_INDEX_TYPE;
+    typedef typename POLYMESH_DATA<VTYPE,NTYPE,FACE_INFO_TYPE>::NUMBER_TYPE 
+    NUMBER_TYPE;
+
+  public:
+    FACE_LIST_BASE(){};
+
+    // Get functions.
+    NUMBER_TYPE NumFaces() const
+    { return(POLYMESH_DATA<VTYPE,NTYPE,FACE_INFO_TYPE>::NumPoly()); }
+
+    NUMBER_TYPE NumFaceVert(const NUMBER_TYPE jf) const
+    { return(POLYMESH_DATA<VTYPE,NTYPE,FACE_INFO_TYPE>::NumPolyVert(jf)); }
+
+    template <typename FTYPE>
+    POLY_INDEX_TYPE PolyContainingFace(const FTYPE jf) const
+    { return(this->poly_data[jf].poly_containing_face); }
+
+    template <typename FTYPE>
+    POLY_INDEX_TYPE FaceIndex(const FTYPE jf) const
+    { return(this->poly_data[jf].face_index); }
+
+
+    // Disable.
+    NUMBER_TYPE NumPoly() const;
+    NUMBER_TYPE NumPolyVert() const;
+  };
+
+
+  // **************************************************
+  // Class FACET_LIST_BASE (NOTE: FACET NOT FACE)
+  // **************************************************
+
+  /// List of facet information.
+  /// - Note: Facet, not face, as in FACE_LIST_BASE.
+  /// - Note: A facet which appears in k polytopes will usually appear
+  ///   k times in the facet list.
+  template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
+  class FACET_LIST_BASE:public FACE_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>
+  {
+
+  public:
+    typedef typename FACET_INFO_TYPE::POLY_INDEX_TYPE POLY_INDEX_TYPE;
+    typedef typename FACET_INFO_TYPE::FACE_INDEX_TYPE FACET_INDEX_TYPE;
+    typedef typename FACE_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::NUMBER_TYPE 
+    NUMBER_TYPE;
+
+  public:
+    FACET_LIST_BASE() {};
+
+    // Get functions.
+
+    /// Return number of facets.
+    NUMBER_TYPE NumFacets() const
+    { return(this->NumFaces()); }
+
+    /// Return number of facet vertices.
+    NUMBER_TYPE NumFacetVert(const NUMBER_TYPE jf) const
+    { return(this->NumFaceVert(jf)); }
+
+    /// Return index of polytope containing facet.
+    template <typename FTYPE>
+    POLY_INDEX_TYPE PolyContainingFacet(const FTYPE jf) const
+    { return(this->PolyContainingFace(jf)); }
+
+    /// Return index of facet in polytope.
+    template <typename FTYPE>
+    FACET_INDEX_TYPE FacetIndex(const FTYPE jf) const
+    { return(this->FaceIndex(jf)); }
+
+    /// Set adjacency poly from mesh of (hyper) cubes.
+    /// @param polymesh Mesh of (hyper) cubes.
+    ///   - Cube vertices are listed in order:
+    ///     (0,0,0), (1,0,0), (0,1,0), (1,1,0), 
+    ///     (0,0,1), (1,0,1), (0,1,1), (1,1,1).
+    /// @pre polymesh is mesh of cubes of same dimension as cube.
+    template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+    void SetFromMeshOfCubes
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh, const CUBE_TYPE & cube);
+
+    /// Set adjacency poly from mesh of simplices.
+    /// @param polymesh Mesh of simplices.
+    template <typename VTYPE2, typename NTYPE2>
+    void SetFromMeshOfSimplices
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh);
+  };
+
+
+  // **************************************************
   // POLYMESH compare
   // **************************************************
 
-  /// function class for comparing polytopes in POLYMESH
-  /// @pre: Vertices for each poly are sorted.
+  /// \brief Function class for comparing polytopes in POLYMESH.
+  /// @pre Vertices for each poly are sorted.
   template <typename MTYPE> 
   class POLYMESH_LESS_THAN:public LIST_LESS_THAN<MTYPE> {
 
@@ -633,6 +938,15 @@ namespace IJK {
     POLYMESH<VTYPE,NTYPE>::AddPolytopes(poly_vert_list, num_vert_per_poly);
   }
 
+  template <typename VTYPE, typename NTYPE, typename POLY_DATA>
+  template <typename VTYPE2, typename NTYPE2>
+  void POLYMESH_DATA<VTYPE,NTYPE,POLY_DATA>::
+  Set(const POLYMESH<VTYPE2,NTYPE2> & polymesh)
+  {
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+      AddPolytope(polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly));
+    }
+  }
 
   template <typename VTYPE, typename NTYPE, typename POLY_DATA>
   bool POLYMESH_DATA<VTYPE,NTYPE,POLY_DATA>::
@@ -1024,6 +1338,176 @@ namespace IJK {
 
 
   // **************************************************
+  // Class POLYMESH_ADJACENCY_BASE member functions
+  // **************************************************
+
+  template <const int MAX_NUM_FACETS, typename ADJACENT_POLY_TYPE, 
+            typename NTYPE>
+  template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+  void POLYMESH_ADJACENCY_BASE<MAX_NUM_FACETS,ADJACENT_POLY_TYPE,NTYPE>::
+  SetFromMeshOfCubes(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                     const CUBE_TYPE & cube)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename POLYMESH<VTYPE2,NTYPE2>::VERTEX_INDEX_TYPE VTYPE;
+    typedef typename ADJACENT_POLY_TYPE::POLY_INDEX_TYPE PTYPE;
+    typedef FACE_INFO_BASE<PTYPE,NTYPE> FACET_INFO;
+
+    const NTYPE num_poly = polymesh.NumPoly();
+    const NTYPE num_cube_facets = cube.NumFacets();
+    FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO> facets;
+    std::vector<VTYPE> poly_facet(cube.NumFacetVertices());
+    std::vector<PTYPE> sorted_facet;
+    std::vector<PTYPE> adj_poly(num_poly*num_cube_facets);
+    IJK::PROCEDURE_ERROR error("POLYMESH_ADJACENCY::SetFromMeshOfCubes");
+
+    this->SetNumLists(num_poly);
+    this->SetListLengths(MAX_NUM_FACETS);
+    this->SetFirstElement();
+    this->AllocArrayElement();
+
+    facets.SetFromMeshOfCubes(polymesh, cube);
+    facets.SortVert();
+    facets.GetSortedPolytopeIndices(sorted_facet);
+
+    NTYPE j0 = 0;
+    while (j0+1 < facets.NumFacets()) {
+      const NTYPE j1 = j0+1;
+
+      // Note: This code assumes that at most two polytopes share a facet.
+      if (facets.ArePolytopesEqual(sorted_facet[j0],sorted_facet[j1])) {
+
+        const PTYPE jpoly0 = 
+          facets.poly_data[sorted_facet[j0]].poly_containing_face;
+        const NTYPE facet0 = facets.poly_data[sorted_facet[j0]].face_index;
+        const PTYPE jpoly1 = 
+          facets.poly_data[sorted_facet[j1]].poly_containing_face;
+        const NTYPE facet1 = facets.poly_data[sorted_facet[j1]].face_index;
+
+        if (jpoly0 != jpoly1) {
+          this->element[this->ElementIndex(jpoly0,facet0)].
+            SetPolyFacet(jpoly1, facet1);
+          this->element[this->ElementIndex(jpoly1,facet1)].
+            SetPolyFacet(jpoly0, facet0);
+        }
+
+        // Note: This code assumes that at most two polytopes share a facet.
+        j0 += 2;
+      } 
+    else 
+      { j0++; }
+    }
+
+  }
+
+
+  // **************************************************
+  // Class POLYMESH_ADJACENCY_LISTS member functions
+  // **************************************************
+
+  template <typename PTYPE, typename NTYPE>
+  template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+  void POLYMESH_ADJACENCY_LISTS<PTYPE,NTYPE>::
+  SetFromMeshOfCubes(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                     const CUBE_TYPE & cube)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename POLYMESH<VTYPE2,NTYPE2>::VERTEX_INDEX_TYPE VTYPE;
+    typedef FACE_INFO_BASE<PTYPE,NTYPE> FACET_INFO;
+
+    const NTYPE num_poly = polymesh.NumPoly();
+    const NTYPE num_cube_facets = cube.NumFacets();
+    FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO> facets;
+    std::vector<VTYPE> poly_facet(cube.NumFacetVertices());
+    std::vector<PTYPE> sorted_facet;
+    std::vector<PTYPE> adj_poly(num_poly*num_cube_facets);
+    std::vector<std::pair<PTYPE,PTYPE>> overflow_adj_poly_list;
+    std::vector<PTYPE> num_adj(num_poly, 0);
+    IJK::PROCEDURE_ERROR error("POLYMESH_ADJACENCY_LISTS::SetFromMeshOfCubes");
+
+    facets.SetFromMeshOfCubes(polymesh, cube);
+    facets.SortVert();
+    facets.GetSortedPolytopeIndices(sorted_facet);
+
+    NTYPE j0 = 0;
+    while (j0 < facets.NumFacets()) {
+      NTYPE j1 = j0+1;
+      while (j1 < facets.NumFacets() && 
+             facets.ArePolytopesEqual(sorted_facet[j0],sorted_facet[j1])) 
+        { j1++; }
+
+      const PTYPE jpoly0 = facets.PolyContainingFacet(sorted_facet[j0]);
+
+      if (j0+2 == j1) {
+        const PTYPE jpoly1 = facets.PolyContainingFacet(sorted_facet[j0+1]);
+
+        if (jpoly0 != jpoly1) {
+          IJK::add_to_list_store_overflow
+            (jpoly0, jpoly1, &(adj_poly[jpoly0*num_cube_facets]),
+             num_adj[jpoly0], num_cube_facets, overflow_adj_poly_list);
+          IJK::add_to_list_store_overflow
+            (jpoly1, jpoly0, &(adj_poly[jpoly1*num_cube_facets]),
+             num_adj[jpoly1], num_cube_facets, overflow_adj_poly_list);
+        }
+      }
+      else if (j0+2 < j1) {
+
+        for (NTYPE k0 = j0; k0+1 < j1; k0++) {
+          for (NTYPE k1 = k0+1; k1 < j1; k1++) {
+            const PTYPE kpoly0 = facets.PolyContainingFacet(sorted_facet[k0]);
+            const PTYPE kpoly1 = facets.PolyContainingFacet(sorted_facet[k1]);
+
+            if (kpoly0 != kpoly1) {
+              IJK::add_to_list_store_overflow
+                (kpoly0, kpoly1, &(adj_poly[kpoly0*num_cube_facets]),
+                 num_adj[kpoly0], num_cube_facets, overflow_adj_poly_list);
+              IJK::add_to_list_store_overflow
+                (kpoly1, kpoly0, &(adj_poly[kpoly1*num_cube_facets]),
+                 num_adj[kpoly1], num_cube_facets, overflow_adj_poly_list);
+            }
+          }
+        }
+      }
+
+      j0 = j1;
+    }
+
+    // Store adjacent polytopes.
+    if (overflow_adj_poly_list.size() == 0) {
+      for (PTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+        this->AddList(&(adj_poly[ipoly*num_cube_facets]), num_adj[ipoly]);
+      }
+    }
+    else {
+      std::vector<PTYPE> adj_poly_i(num_poly);
+
+      std::sort(overflow_adj_poly_list.begin(), overflow_adj_poly_list.end());
+
+      NTYPE k = 0;
+      for (PTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+        NTYPE num_adj_i = num_adj[ipoly];
+        std::copy(&(adj_poly[ipoly*num_cube_facets]),
+                  &(adj_poly[ipoly*num_cube_facets+num_adj[ipoly]]),
+                  &(adj_poly_i.front()));
+        while (k < overflow_adj_poly_list.size() &&
+               overflow_adj_poly_list[k].first == ipoly) {
+          if (num_adj_i < adj_poly_i.size()) {
+            adj_poly_i[num_adj_i] = overflow_adj_poly_list[k].second;
+          }
+          else {
+            adj_poly_i.push_back(overflow_adj_poly_list[k].second);
+          }
+          num_adj_i++;
+          k++;
+        }
+
+        this->AddList(&(adj_poly_i.front()), num_adj_i);
+      }
+    }
+  }
+
+
+  // **************************************************
   // Class VERTEX_POLY_EDGE_INCIDENCE member functions
   // **************************************************
 
@@ -1120,7 +1604,8 @@ namespace IJK {
 
     // Check stored correct number of adjacent vertices for each vertex.
     for (NTYPE iv = 0; iv < numv; iv++) {
-      if (current_element[iv] != adjacent.FirstElement(iv) + adjacent.ListLength(iv)) {
+      if (current_element[iv] != 
+          adjacent.FirstElement(iv) + adjacent.ListLength(iv)) {
         error.AddMessage
           ("Programming error.  Problem computing vertices adjacent to vertex ",
            iv, ".");
@@ -1128,7 +1613,8 @@ namespace IJK {
           ("  Expected ", adjacent.ListLength(iv), 
            " vertices (including duplicates)");
         error.AddMessage
-          ("  but computed ", current_element[iv]-adjacent.FirstElement(iv), " adjacent vertices.");
+          ("  but computed ", current_element[iv]-adjacent.FirstElement(iv), 
+           " adjacent vertices.");
         throw error;
       }
     }
@@ -1255,6 +1741,70 @@ namespace IJK {
     }
 
     return(false);
+  }
+
+
+  // **************************************************
+  // Class FACET_LIST_BASE member functions
+  // **************************************************
+
+  template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
+  template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+  void FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::
+  SetFromMeshOfCubes(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                     const CUBE_TYPE & cube)
+  {
+    std::vector<VTYPE> facet_vertices(cube.NumFacetVertices());
+
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+      for (NTYPE jf = 0; jf < cube.NumFacets(); jf++) {
+        for (NTYPE k = 0; k < cube.NumFacetVertices(); k++) {
+          const VTYPE kv = cube.FacetVertex(jf, k);
+          facet_vertices[k] = polymesh.Vertex(ipoly, kv);
+        }
+        const NTYPE ifacet = this->NumFacets();
+        this->AddPolytope(facet_vertices);
+        this->poly_data[ifacet].poly_containing_face = ipoly;
+        this->poly_data[ifacet].face_index = jf;
+      }
+    }
+  }
+
+
+  template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
+  template <typename VTYPE2, typename NTYPE2>
+  void FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::
+  SetFromMeshOfSimplices(const POLYMESH<VTYPE2,NTYPE2> & polymesh)
+  {
+    if (polymesh.NumPoly() == 0) { return; }
+ 
+    const NTYPE NUM_VERT_PER_SIMPLEX(polymesh.NumPolyVert(0));
+    const NTYPE NUM_FACETS_PER_SIMPLEX(NUM_VERT_PER_SIMPLEX);
+    const NTYPE NUM_VERT_PER_FACET(NUM_VERT_PER_SIMPLEX-1);
+    std::vector<VTYPE> facet_vertices(NUM_VERT_PER_FACET);
+
+    if (NUM_VERT_PER_SIMPLEX <= 1) { return; }
+
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+      for (NTYPE jf = 0; jf < NUM_FACETS_PER_SIMPLEX; jf++) {
+        for (NTYPE k = 0; k < NUM_VERT_PER_FACET; k++) {
+          const VTYPE kv = (jf+1+k)%NUM_VERT_PER_SIMPLEX;
+          facet_vertices[k] = polymesh.Vertex(ipoly, kv);
+        }
+        
+        if (NUM_VERT_PER_FACET > 1) {
+          if (jf%2 == 1) {
+            // Correct orientation.
+            std::swap(facet_vertices[NUM_VERT_PER_FACET-2],
+                      facet_vertices[NUM_VERT_PER_FACET-1]);
+          }
+        }
+        const NTYPE ifacet = this->NumFacets();
+        this->AddPolytope(facet_vertices);
+        this->poly_data[ifacet].poly_containing_face = ipoly;
+        this->poly_data[ifacet].face_index = jf;
+      }
+    }
   }
 
 

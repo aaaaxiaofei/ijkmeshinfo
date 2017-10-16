@@ -38,6 +38,7 @@
 #include "ijkIO.txx"
 #include "ijkmerge.txx"
 #include "ijkmesh.txx"
+#include "ijkmesh_faces.txx"
 #include "ijkprint.txx"
 #include "ijkstring.txx"
 
@@ -107,6 +108,12 @@ vector<int> nonmanifold_facet_vert; // list of nonmanifold facet vertices
 vector<int> nonmanifold_edge_vert;  // list of nonmanifold edge vertices
 vector<int> boundary_facet_vert;    // list of boundary facet vertices
 
+// List of pairs of hex facets which share exactly two edges.
+FACET_INFO_PAIRS_ARRAY hex_facet_pairs_sharing_exactly_two_edges;
+
+// list of vertices in facets with mismatched orientations.
+vector<int> orientation_mismatch_facet_vert;
+
 // true if boundary facet is inside bounding box
 vector<bool> internal_boundary_facet;  
 
@@ -134,6 +141,7 @@ bool simplex_info_flag = false;
 bool poly_info_flag = false;
 bool manifold_flag = false;
 bool oriented_manifold_flag = false;
+bool check_facet_intersections_flag = false;
 bool terse_flag = false;
 bool vlist_flag = false;
 bool plist_flag = false;
@@ -166,6 +174,9 @@ int identify_duplicate_polytopes();
 void identify_polygon_edges();
 void set_in_nonmanifold_facet();
 void set_in_nonmanifold_edge();
+void identify_hex_sharing_exactly_two_facet_edges
+(const POLYMESH_TYPE & polymesh, 
+ FACET_INFO_PAIRS_ARRAY & facet_pairs_sharing_exactly_two_edges);
 
 // manifold routines
 void identify_nonmanifold();
@@ -203,6 +214,8 @@ void output_polytopes();
 bool output_self_intersections();
 bool output_self_intersections_using_grid_of_bins();
 void output_manifold_and_boundary_counts();
+void output_hex_facet_pairs_sharing_exactly_two_edge
+(const FACET_INFO_PAIRS_ARRAY & facet_pairs_sharing_exactly_two_edges);
 void output_poly_angles
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
@@ -273,6 +286,7 @@ typedef enum
    VERTEX_PARAM, SIMPLEX_PARAM, POLY_PARAM,
    VLIST_PARAM, PLIST_PARAM, CONTAINSV_PARAM, CONTAINSE_PARAM,
    MANIFOLD_PARAM, ORIENTED_MANIFOLD_PARAM,
+   CHECK_FACET_INTERSECTIONS_PARAM,
    SELFI_PARAM, SELFI_NO_GRID_PARAM, GRID_LENGTH_PARAM,
    MULTIVERT_PARAM,
    MINC_PARAM, MAXC_PARAM, MIN_NUMV_PARAM, MAX_NUMV_PARAM,
@@ -289,6 +303,7 @@ const char * parameter_string[] =
    "-vertex", "-simplex", "-poly",
    "-vlist", "-plist", "-containsv", "-containse",
    "-manifold", "-oriented_manifold",
+   "-check_facetI",
    "-selfI", "-selfI_no_grid", "-grid_length",
    "-multivert",
    "-minc", "-maxc", "-min_numv", "-max_numv",
@@ -416,7 +431,19 @@ int main(int argc, char **argv)
           output_manifold_info();
         };
       };
-    };
+    }
+    else if (check_facet_intersections_flag) {
+      if (mesh_data.dimension == DIM3 && flag_cube_file) {
+
+        if (!mesh_data.are_hex_sharing_exactly_two_facet_edges_identified) {
+          identify_hex_sharing_exactly_two_facet_edges
+            (polymesh, hex_facet_pairs_sharing_exactly_two_edges);
+        }
+
+        output_hex_facet_pairs_sharing_exactly_two_edge
+          (hex_facet_pairs_sharing_exactly_two_edges);
+      }
+    }
 
     if (flag_report_self_intersections) {
       if (flag_simplex_file && num_vert_per_simplex == 3 &&
@@ -1004,7 +1031,7 @@ void output_poly_with_min_max_edge_lengths
         (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
     }
   }
-  else if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
+  else if (flag_cube_file && mesh_dimension == DIM3) {
     if (io_info.flag_output_min_edge_length || 
         io_info.flag_output_all_min_max) {
       output_hexahedra_with_min_edge_lengths
@@ -1232,6 +1259,22 @@ void output_manifold_info()
     }
   }
 
+  if (mesh_data.dimension == DIM3 && flag_cube_file) {
+
+    if (hex_facet_pairs_sharing_exactly_two_edges.size() > 0) {
+      if (!flag_newline && !terse_flag) { cout << endl; }
+    }
+
+    output_hex_facet_pairs_sharing_exactly_two_edge
+      (hex_facet_pairs_sharing_exactly_two_edges);
+
+    if (hex_facet_pairs_sharing_exactly_two_edges.size() > 0 &&
+        !terse_flag) {
+      cout << endl;
+      flag_newline = true;
+    }
+  }
+
   if (mesh_dimension == DIM2 || flag_simplex_file || flag_cube_file) {
 
     int numv_per_facet;
@@ -1272,7 +1315,7 @@ void output_manifold_info()
       }
       else {
         if (!flag_newline && !terse_flag) { cout << endl; }
-        cout << "Num non-manifold edges " 
+        cout << "Num non-manifold edges: " 
              << mesh_info.num_nonmanifold_edges << endl;
         if (!terse_flag) {
           output_nonmanifold_edges();
@@ -1406,9 +1449,14 @@ void output_nonmanifold_facets()
 
 void output_nonmanifold_edges()
 {
+  const int DIM3(3);
+  const int mesh_dimension = mesh_data.mesh_dimension;
   const char * poly_str = "Cubes";
   const char * edge_str = "edges";
   const int num_nonmanifold_edges = nonmanifold_edge_vert.size()/2;
+
+  if (mesh_dimension == DIM3) 
+    { poly_str = "Hexahedra"; }
 
   cout << "Non-manifold " << edge_str << ":" << endl;
 
@@ -1529,6 +1577,30 @@ void output_internal_boundary_facets()
       }
 
 
+      cout << endl;
+    }
+  }
+}
+
+void output_hex_facet_pairs_sharing_exactly_two_edge
+(const FACET_INFO_PAIRS_ARRAY & facet_pairs_sharing_exactly_two_edges)
+{
+  if (facet_pairs_sharing_exactly_two_edges.size() == 0) {
+    if (!terse_flag) {
+      cout << "No irregular hex facet intersections." << endl;
+    }
+  }
+  else {
+    cout << "Number of irregular hex facet intersections: "
+         << facet_pairs_sharing_exactly_two_edges.size() << endl;
+
+    if (!terse_flag) {
+      cout << "Hex pairs whose facets intersect in exactly two edges:" << endl;
+      for (int i = 0; i < facet_pairs_sharing_exactly_two_edges.size(); i++) {
+        cout << "  (" << facet_pairs_sharing_exactly_two_edges[i].first.poly_containing_face
+             << "," << facet_pairs_sharing_exactly_two_edges[i].second.poly_containing_face
+             << ")";
+      }
       cout << endl;
     }
   }
@@ -2135,6 +2207,7 @@ void compute_facet_info()
   const int mesh_dimension = mesh_data.mesh_dimension;
   const int NUMV_PER_CUBE = 8;
   const int NUMV_PER_CUBE_FACET = NUMV_PER_CUBE/2;
+  const int DIM3(3);
 
   compute_bounding_box();
   if (flag_simplex_file || mesh_dimension == 2) {
@@ -2154,6 +2227,13 @@ void compute_facet_info()
 
     mesh_info.num_nonmanifold_facets =
       (nonmanifold_facet_vert.size())/NUMV_PER_CUBE_FACET;
+  }
+
+  if (mesh_data.dimension == DIM3 && flag_cube_file) {
+    identify_hex_sharing_exactly_two_facet_edges
+      (polymesh, hex_facet_pairs_sharing_exactly_two_edges);
+    mesh_info.num_hex_facet_pairs_sharing_exactly_two_edges =
+      hex_facet_pairs_sharing_exactly_two_edges.size();
   }
 
   if (oriented_manifold_flag) {
@@ -2650,10 +2730,10 @@ bool does_polygon_orientation_match
 (const POLYMESH_TYPE & polymesh, 
  const FACET_INFO & facetA, const FACET_INFO & facetB)
 {
-  const int ipolyA = facetA.poly_containing_facet;
-  const int ipolyB = facetB.poly_containing_facet;
-  const int jend0A = facetA.facet_index;
-  const int jend0B = facetB.facet_index;
+  const int ipolyA = facetA.poly_containing_face;
+  const int ipolyB = facetB.poly_containing_face;
+  const int jend0A = facetA.face_index;
+  const int jend0B = facetB.face_index;
   const int jend1A = (jend0A+1)%polymesh.NumPolyVert(ipolyA);
   const int jend1B = (jend0B+1)%polymesh.NumPolyVert(ipolyB);
 
@@ -2671,8 +2751,8 @@ bool does_polygon_orientation_match
 bool is_parity_even
 (const POLYMESH_TYPE & polymesh, const FACET_INFO & facetA)
 {
-  const int ipolyA = facetA.poly_containing_facet;
-  const int ifacetA = facetA.facet_index;
+  const int ipolyA = facetA.poly_containing_face;
+  const int ifacetA = facetA.face_index;
   const int NUM_SIMPLEX_VERT = polymesh.NumPolyVert(ipolyA);
   bool flag_even_parity;
 
@@ -2700,49 +2780,6 @@ bool does_simplex_orientation_match
   return((is_parityA_even != is_parityB_even));
 }
 
-bool does_hexahedron_orientation_match
-(const POLYMESH_TYPE & polymesh, 
- const FACET_INFO & facetA, const FACET_INFO & facetB,
- const CUBE_TYPE & cube)
-{
-  const int NUM_VERT_PER_CUBE_FACET(4);
-  int facetA_list[NUM_VERT_PER_CUBE_FACET];
-  int facetB_list[NUM_VERT_PER_CUBE_FACET];
-
-  const int ipolyA = facetA.poly_containing_facet;
-  const int ipolyB = facetB.poly_containing_facet;
-  const int ifacetA = facetA.facet_index;
-  const int ifacetB = facetB.facet_index;
-  for (int i = 0; i < NUM_VERT_PER_CUBE_FACET; i++) {
-    const int jA = cube.FacetVertex(ifacetA, i);
-    const int jB = cube.FacetVertex(ifacetB, i);
-    facetA_list[i] = polymesh.Vertex(ipolyA, jA);
-    facetB_list[i] = polymesh.Vertex(ipolyB, jB);
-  }
-
-  std::swap(facetA_list[2], facetA_list[3]);
-  std::swap(facetB_list[2], facetB_list[3]);
-
-
-  // Location of facetB_list[0] in facetA_list.
-  int jloc0;
-  if (!does_list_contain
-      (facetA_list, NUM_VERT_PER_CUBE_FACET, facetB_list[0], jloc0)) {
-    // facetA and facetB are not the same.
-    // Cannot compare orientation.
-    return(true);
-  }
-
-  const int jloc1 = (jloc0+1)%NUM_VERT_PER_CUBE_FACET;
-
-  if (facetA_list[jloc1] == facetB_list[1]) {
-    // Polytopes have opposite orientation.
-    return(false); 
-  }
-  else
-    { return(true); }
-}
-
 
 // Return true if two polytopes have same orientation based on common facet.
 bool does_polytope_orientation_match
@@ -2760,9 +2797,6 @@ bool does_polytope_orientation_match
   else if (flag_simplex_file) {
     return(does_simplex_orientation_match(polymesh, facet0, facet1));
   }
-  else if (flag_cube_file && cube.Dimension() == DIM3) {
-    return(does_hexahedron_orientation_match(polymesh, facet0, facet1, cube));
-  }
   else {
     error.AddMessage
       ("Programming error.  Unable to determine polytope facets.");
@@ -2771,6 +2805,128 @@ bool does_polytope_orientation_match
 
 }
 
+void set_poly_containing_nonmanifold_facets
+(const FACET_INFO_ARRAY & non_manifold_facets, POLYMESH_TYPE & polymesh)
+{
+  // Flag polytopes containing non-manifold facets.
+  for (int j = 0; j < non_manifold_facets.size(); j++) {
+    const int jpoly = non_manifold_facets[j].poly_containing_face;
+    polymesh.poly_data[jpoly].contains_nonmanifold_facet = true;
+  }
+}
+
+void set_poly_containing_boundary_facets
+(const FACET_INFO_ARRAY & boundary_facets, POLYMESH_TYPE & polymesh)
+{
+  // Flag polytopes containing boundary facets.
+  for (int j = 0; j < boundary_facets.size(); j++) {
+    const int jpoly = boundary_facets[j].poly_containing_face;
+    polymesh.poly_data[jpoly].contains_boundary_facet = true;
+  }
+}
+
+void set_poly_containing_mismatched_orientations
+(const FACET_INFO_ARRAY & orientation_mismatch_facets, 
+ POLYMESH_TYPE & polymesh, vector<int> & orientation_conflict_list)
+{
+  // Flag polytopes containing orientation mismatch facets.
+  for (int j = 0; j < orientation_mismatch_facets.size(); j++) {
+    const int jpoly = orientation_mismatch_facets[j].poly_containing_face;
+    polymesh.poly_data[jpoly].orientation_conflict = true;
+  }
+
+  // Get list of polytopes with mismatched orientations.
+  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    if (polymesh.poly_data[ipoly].orientation_conflict) 
+      { orientation_conflict_list.push_back(ipoly); }
+  }
+}
+
+void determine_internal_boundary_facets
+(const vector<int> & boundary_facet_vert,
+ const int num_vert_per_facet,
+ vector<bool> & internal_boundary_facet,
+ vector<bool> & far_from_bounding_box)
+{
+  internal_boundary_facet.clear();
+  far_from_bounding_box.clear();
+
+  // Determine internal boundary facets;
+  const int num_boundary_facets = 
+    boundary_facet_vert.size()/num_vert_per_facet;
+
+  for (int j = 0; j < num_boundary_facets; j++) {
+    bool flag_internal =
+      is_internal
+      (bounding_box, boundary_facet_vert, num_vert_per_facet, j);
+    internal_boundary_facet.push_back(flag_internal);
+    if (flag_internal) { num_internal_boundary_facets++; }
+
+    if (flag_small_bounding_box) 
+      { flag_internal = false; }
+    else {
+      flag_internal =
+        is_internal(contracted_bounding_box, boundary_facet_vert,
+                    num_vert_per_facet, j);
+    }
+    far_from_bounding_box.push_back(flag_internal);
+    if (flag_internal) { num_deep_boundary_facets++; }
+  }
+}
+
+
+// Identify non-manifold facets and boundary facets of tet mesh.
+// A facet is non-manifold if it is in more than two polytope.
+// A facet is boundary if it is in only one polytope.
+void identify_nonmanifold_and_boundary_facets_of_tet_mesh()
+{
+  const int NUM_VERT_PER_TET(4);
+  const int NUM_VERT_PER_FACET(NUM_VERT_PER_TET-1);
+  FACET_INFO_ARRAY non_manifold_facets;
+  FACET_INFO_ARRAY boundary_facets;
+  FACET_INFO_ARRAY orientation_mismatch_facets;
+
+  get_non_manifold_and_boundary_facets_of_tet_mesh
+    (polymesh, nonmanifold_facet_vert, non_manifold_facets, 
+     boundary_facet_vert, boundary_facets,
+     orientation_mismatch_facet_vert, orientation_mismatch_facets);
+
+  set_poly_containing_nonmanifold_facets(non_manifold_facets, polymesh);
+  set_poly_containing_boundary_facets(boundary_facets, polymesh);
+  set_poly_containing_mismatched_orientations
+    (orientation_mismatch_facets, polymesh, orientation_conflict_list);
+
+  determine_internal_boundary_facets
+    (boundary_facet_vert, NUM_VERT_PER_FACET, internal_boundary_facet,
+     far_from_bounding_box);
+}
+
+
+// Identify non-manifold facets and boundary facets of hex mesh.
+// A facet is non-manifold if it is in more than two polytope.
+// A facet is boundary if it is in only one polytope.
+void identify_nonmanifold_and_boundary_facets_of_hex_mesh()
+{
+  const CUBE_TYPE cube(DIM3);
+  const int NUM_VERT_PER_FACET(cube.NumFacetVertices());
+  FACET_INFO_ARRAY non_manifold_facets;
+  FACET_INFO_ARRAY boundary_facets;
+  FACET_INFO_ARRAY orientation_mismatch_facets;
+
+  get_non_manifold_and_boundary_facets_of_hex_mesh
+    (polymesh, cube, nonmanifold_facet_vert, non_manifold_facets, 
+     boundary_facet_vert, boundary_facets,
+     orientation_mismatch_facet_vert, orientation_mismatch_facets);
+
+  set_poly_containing_nonmanifold_facets(non_manifold_facets, polymesh);
+  set_poly_containing_boundary_facets(boundary_facets, polymesh);
+  set_poly_containing_mismatched_orientations
+    (orientation_mismatch_facets, polymesh, orientation_conflict_list);
+
+  determine_internal_boundary_facets
+    (boundary_facet_vert, NUM_VERT_PER_FACET, internal_boundary_facet,
+     far_from_bounding_box);
+}
 
 
 // Identify non-manifold facets and boundary facets.
@@ -2795,8 +2951,25 @@ void identify_nonmanifold_and_boundary_facets()
   VERTEX_POLY_INCIDENCE_TYPE vertex_info(polymesh);
 
   if (mesh_dimension == 2) { numv_per_facet = 2; }
+  else if (flag_simplex_file && mesh_dimension == 3) { 
+    identify_nonmanifold_and_boundary_facets_of_tet_mesh();
+    mesh_data.are_boundary_facets_identified = true;
+    mesh_data.are_nonmanifold_facets_identified = true;
+    set_in_nonmanifold_facet();
+
+    // Done.  Return.
+    return;
+  }
   else if (flag_simplex_file) { numv_per_facet = mesh_dimension; }
-  else if (flag_cube_file) { numv_per_facet = NUMV_PER_CUBE_FACET; }
+  else if (flag_cube_file) { 
+    identify_nonmanifold_and_boundary_facets_of_hex_mesh();
+    mesh_data.are_boundary_facets_identified = true;
+    mesh_data.are_nonmanifold_facets_identified = true;
+    set_in_nonmanifold_facet();
+
+    // Done.  Return.
+    return;
+  }
   else {
     error.AddMessage
       ("Programming error.  Unable to determine number of vertices per facet.");
@@ -2838,7 +3011,7 @@ void identify_nonmanifold_and_boundary_facets()
       // set poly containing facets to non-manifold
       for (int m = k0; m < k1; m++) {
         const int mf = index_sorted[m];
-        const int ipoly = facet_info[mf].poly_containing_facet;
+        const int ipoly = facet_info[mf].poly_containing_face;
         polymesh.poly_data[ipoly].contains_nonmanifold_facet = true;
       }
     }
@@ -2871,15 +3044,15 @@ void identify_nonmanifold_and_boundary_facets()
       // set facets to boundary
       for (int m = k0; m < k1; m++) {
         const int mf = index_sorted[m];
-        const int ipoly = facet_info[mf].poly_containing_facet;
+        const int ipoly = facet_info[mf].poly_containing_face;
         polymesh.poly_data[ipoly].contains_boundary_facet = true;
       }
     }
     else if (num_duplicate == 2) {
       const int kf0 = index_sorted[k0];
       const int kf1 = index_sorted[k0+1];
-      const int ipoly0 = facet_info[kf0].poly_containing_facet;
-      const int ipoly1 = facet_info[kf1].poly_containing_facet;
+      const int ipoly0 = facet_info[kf0].poly_containing_face;
+      const int ipoly1 = facet_info[kf1].poly_containing_face;
       if (!does_polytope_orientation_match
           (polymesh, facet_info[kf0], facet_info[kf1], cube)) {
 
@@ -3437,6 +3610,99 @@ bool is_internal(const BOUNDING_BOX & bounding_box,
 
 
 // **************************************************
+// POLYTOPE INTERSECTION ROUTNES
+// **************************************************
+
+namespace {
+
+  /// Return true if first three vertices of vlistA and vlistB are equal.
+  bool do_first_three_vertices_match
+  (const VERTEX_INDEX vlistA[], const VERTEX_INDEX vlistB[]) {
+    if (vlistA[0] == vlistB[0] &&
+        vlistA[1] == vlistB[1] &&
+        vlistA[2] == vlistB[2])
+      { return(true); }
+
+    return(false);
+  }
+
+}
+
+// Identify hexahedra which share exactly two facet edges, but not a facet.
+void identify_hex_sharing_exactly_two_facet_edges
+(const POLYMESH_TYPE & polymesh, 
+ FACET_INFO_PAIRS_ARRAY & facet_pairs_sharing_exactly_two_edges)
+{
+  const CUBE_TYPE cube(DIM3);
+  const int NUM_VERT_PER_HEX_FACET(4);
+  VERTEX_INDEX facet_vert[NUM_VERT_PER_HEX_FACET];
+  VERTEX_INDEX ordered_facet_vert[NUM_VERT_PER_HEX_FACET];
+  vector<int> index_sorted;
+
+  // List of hex facets with each facet listed four times
+  //   with four different last vertices.
+  IJK::FACET_LIST_BASE<VERTEX_INDEX,int,FACET_INFO> ordered_facet;
+
+  for (int ihex = 0; ihex < polymesh.NumPoly(); ihex++) {
+    for (int jf = 0; jf < cube.NumFacets(); jf++) {
+      facet_vert[0] = cube.FacetVertex(jf, 0);
+      facet_vert[1] = cube.FacetVertex(jf, 1);
+
+      // Reverse vertices 2 and 3 to list facets in clockwiser or
+      //   counter-clockwise order around facet.
+      facet_vert[2] = cube.FacetVertex(jf, 3);
+      facet_vert[3] = cube.FacetVertex(jf, 2);
+
+      for (int k = 0; k < NUM_VERT_PER_HEX_FACET; k++) 
+        { facet_vert[k] = polymesh.Vertex(ihex, facet_vert[k]); }
+
+      for (int k0 = 0; k0 < NUM_VERT_PER_HEX_FACET; k0++) {
+        for (int k1 = 0; k1 < NUM_VERT_PER_HEX_FACET; k1++) {
+          int k2 = (k0+k1)%NUM_VERT_PER_HEX_FACET;
+          ordered_facet_vert[k1] = facet_vert[k2];
+        }
+
+        if (ordered_facet_vert[0] > ordered_facet_vert[2]) {
+          // Reverse facet orientation so that 
+          //   ordered_facet_vert[0] <= ordered_facet_vert[2].
+          std::swap(ordered_facet_vert[0], ordered_facet_vert[2]);
+        }
+
+        const int ifacet = ordered_facet.NumFacets();
+        ordered_facet.AddPolytope(ordered_facet_vert, NUM_VERT_PER_HEX_FACET);
+        ordered_facet.poly_data[ifacet].poly_containing_face = ihex;
+        ordered_facet.poly_data[ifacet].face_index = jf;
+      }
+    }
+  }
+
+  index_sorted.resize(ordered_facet.NumFacets());
+  ordered_facet.GetSortedPolytopeIndices(index_sorted);
+
+  // Check for hexahedra sharing exactly two edges but no facets.
+  for (int k1 = 1; k1 < ordered_facet.NumFacets(); k1++) {
+    const int kf1 = index_sorted[k1];
+    const int k0 = k1-1;
+    const int kf0 = index_sorted[k0];
+
+    if (do_first_three_vertices_match
+        (ordered_facet.VertexList(kf0), ordered_facet.VertexList(kf1))) {
+
+      if (ordered_facet.Vertex(kf0,3) != ordered_facet.Vertex(kf1,3)) {
+        FACET_INFO facet0_info = ordered_facet.poly_data[kf0];
+        FACET_INFO facet1_info = ordered_facet.poly_data[kf1];
+        facet_pairs_sharing_exactly_two_edges.push_back
+          (FACET_INFO_PAIR(facet0_info, facet1_info));
+      }
+    }
+
+  }
+
+  mesh_data.are_hex_sharing_exactly_two_facet_edges_identified = true;
+}
+
+
+// **************************************************
 // PLOT ANGLE ROUTINES
 // **************************************************
 
@@ -3748,6 +4014,7 @@ void MESH_INFO::Init()
   num_nonmanifold_vertices = 0;
   num_deep_nonmanifold_vertices = 0;
   num_poly_with_orientation_conflicts = 0;
+  num_hex_facet_pairs_sharing_exactly_two_edges = 0;
 }
 
 // Return true if all non-manifold numbers are zero.
@@ -3755,6 +4022,7 @@ bool MESH_INFO::AreAllNonManifoldZero() const
 {
   if (num_poly_with_duplicate_vertices > 0) { return(false); }
   if (num_duplicate_poly > 0) { return(false); }
+  if (num_hex_facet_pairs_sharing_exactly_two_edges > 0) { return(false); }
   if (num_nonmanifold_facets > 0) { return(false); }
   if (num_nonmanifold_edges > 0) { return(false); }
   if (num_nonmanifold_vertices > 0) { return(false); }
@@ -3785,6 +4053,7 @@ void MESH_DATA::Init()
 
   are_boundary_facets_identified = false;
   are_nonmanifold_facets_identified = false;
+  are_hex_sharing_exactly_two_facet_edges_identified = false;
 
   // Default to positive orientation.
   orientation = 1;
@@ -4131,6 +4400,11 @@ void parse_command_line(int argc, char **argv)
       case ORIENTED_MANIFOLD_PARAM:
         manifold_flag = true;
         oriented_manifold_flag = true;
+        io_info.flag_general_info = false;
+        break;
+
+      case CHECK_FACET_INTERSECTIONS_PARAM:
+        check_facet_intersections_flag = true;
         io_info.flag_general_info = false;
         break;
 
