@@ -60,10 +60,10 @@ namespace IJK {
   }
 
   /// Find "first" (identifying) element of the set containing x.
-  /// Modifies set with path compression.
+  /// - Modifies set with path compression.
   /// @pre T is an integer type.
   /// @pre set_ident.size() > 0.
-  /// C++ vector version of set_ident.
+  /// - Version using C++ STL vector for array set_ident[].
   template <typename T1, typename T2>
   T2 find_set(const T1 x, std::vector<T2> & set_ident)
   {
@@ -215,6 +215,21 @@ namespace IJK {
   (const std::vector<T1> & list, const T2 el)
   {
     return(does_list_contain(vector2pointer(list), list.size(), el));
+  }
+
+
+  /// Return true if elements of listA equal elements of listB
+  ///   and are in the same order in each list.
+  /// @pre Lists listA and listB have the same length.
+  template <typename TA, typename TB, typename NTYPE>
+  bool are_lists_equal
+  (const TA * listA, const TB * listB, const NTYPE list_length)
+  {
+    for (NTYPE i = 0; i < list_length; i++) {
+      if (listA[i] != listB[i]) { return(false); }
+    }
+
+    return(true);
   }
 
 
@@ -434,7 +449,7 @@ namespace IJK {
     /// @pre Every list is sorted.
     template <typename NTYPE2>
     void CountNumDistinct(std::vector<NTYPE2> & num_distinct) const;
-    
+
     /// Copy.
     template <typename LLTYPE>
     void Copy(const LLTYPE & list_of_lists);
@@ -453,12 +468,31 @@ namespace IJK {
 
     /// Set all list lengths to L.
     /// @pre SetNumLists() must be called before SetListLengths().
-    template <typename NTYPE2>
-    void SetListLengths(const NTYPE2 L);
+    template <typename LTYPE>
+    void SetListLengths(const LTYPE L);
+
+    /// Set length of list i to L[i].
+    /// @param L[] Array of list lengths. L[i] is length of list i.
+    template <typename LTYPE, typename NTYPE2>
+    void SetListLengths(const LTYPE L[], const NTYPE2 num_lists);
 
     /// Set array first_element[].
     /// @pre Array list_length[] is set.
     void SetFirstElement();
+
+    /// Create list of lists of uniform length.
+    template <typename LTYPE, typename NTYPE2>
+    void CreateUniformLengthLists(const LTYPE L, const NTYPE2 num_lists);
+
+    /// Create list of lists.
+    /// @param L[] Array of list lengths. L[i] is length of list i.
+    template <typename LTYPE, typename NTYPE2>
+    void CreateLists(const LTYPE L[], const NTYPE2 num_lists);
+
+    /// Create list of lists.
+    /// - Version using C++ STL vector for array L[] of list lengths.
+    template <typename LTYPE>
+    void CreateLists(const std::vector<LTYPE> & L);
 
     /// Allocate array element[].
     /// @pre Array first_element[] is set.
@@ -629,12 +663,23 @@ namespace IJK {
 
 
   template <typename ETYPE, typename NTYPE>
-  template <typename NTYPE2>
+  template <typename LTYPE>
   void LIST_OF_LISTS<ETYPE,NTYPE>::
-  SetListLengths(const NTYPE2 L)
+  SetListLengths(const LTYPE L)
   {
-    for (NTYPE2 i = 0; i < NumLists(); i++) 
+    for (NTYPE i = 0; i < NumLists(); i++) 
       { list_length[i] = L; }
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename LTYPE, typename NTYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  SetListLengths(const LTYPE L[], const NTYPE2 num_lists)
+  {
+    SetNumLists(num_lists);
+    for (NTYPE2 i = 0; i < NumLists(); i++) 
+      { list_length[i] = L[i]; }
   }
 
 
@@ -667,6 +712,39 @@ namespace IJK {
 
     element.resize(first_element.back()+list_length.back());
   }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename LTYPE, typename NTYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  CreateUniformLengthLists(const LTYPE L, const NTYPE2 num_lists)
+  {
+    this->SetNumLists(num_lists);
+    this->SetListLengths(L);
+    this->SetFirstElement();
+    this->AllocArrayElement();
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename LTYPE, typename NTYPE2>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  CreateLists(const LTYPE L[], const NTYPE2 num_lists)
+  {
+    this->SetListLengths(L, num_lists);
+    this->SetFirstElement();
+    this->AllocArrayElement();
+  }
+
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename LTYPE>
+  void LIST_OF_LISTS<ETYPE,NTYPE>::
+  CreateLists(const std::vector<LTYPE> & L)
+  {
+    CreateLists(IJK::vector2pointer(L), L.size());
+  }
+
 
   template <typename ETYPE, typename NTYPE>
   template <typename ETYPE2, typename NTYPE2>

@@ -97,6 +97,11 @@ namespace IJK {
     (const NTYPE iv) const
     { return(MaxVertexIndex()-iv); }
 
+    /// Index of facet parallel to ifacet.
+    NTYPE OppositeFacet
+    (const NTYPE ifacet) const
+    { return((ifacet+Dimension())%NumFacets()); }
+
     /// Return neighbor of vertex \a iv0.
     /// @param dir Edge direction.
     /// @param iv0 Vertex.

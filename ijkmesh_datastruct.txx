@@ -239,6 +239,10 @@ namespace IJK {
   template <typename ETYPE, typename NTYPE>
   class VERTEX_POLY_INCIDENCE_BASE:protected LIST_OF_LISTS<ETYPE,NTYPE> {
 
+  public:
+
+    typedef typename ETYPE::POLY_INDEX_TYPE POLY_INDEX_TYPE;
+
   protected:
 
     /// Number of vertices.
@@ -257,7 +261,6 @@ namespace IJK {
     /// Set arrays list_length[] and first_element[].
     template <typename VTYPE2, typename NTYPE2>
     void AllocateLists(const POLYMESH<VTYPE2,NTYPE2> & polymesh);
-
 
   public:
 
@@ -848,7 +851,28 @@ namespace IJK {
     FACET_INDEX_TYPE FacetIndex(const FTYPE jf) const
     { return(this->FaceIndex(jf)); }
 
-    /// Set adjacency poly from mesh of (hyper) cubes.
+    /// Set facets from 2D mesh.
+    /// @param polymesh Mesh of 2D polygons.
+    template <typename VTYPE2, typename NTYPE2>
+    void SetFrom2DMesh
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh);
+
+    /// Set facets from 2D mesh.
+    /// - Version which skips some polygons.
+    /// @param polymesh Mesh of 2D polygons.
+    /// @param flag_skip_poly[] If flag_skip_poly[ipoly] is true,
+    ///   then skip polygon ipoly.
+    template <typename VTYPE2, typename NTYPE2>
+    void SetFrom2DMesh(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                       const std::vector<bool> & flag_skip_poly);
+
+    /// Set facets from mesh of simplices.
+    /// @param polymesh Mesh of simplices.
+    template <typename VTYPE2, typename NTYPE2>
+    void SetFromMeshOfSimplices
+    (const POLYMESH<VTYPE2,NTYPE2> & polymesh);
+
+    /// Set facets from mesh of (hyper) cubes.
     /// @param polymesh Mesh of (hyper) cubes.
     ///   - Cube vertices are listed in order:
     ///     (0,0,0), (1,0,0), (0,1,0), (1,1,0), 
@@ -857,12 +881,6 @@ namespace IJK {
     template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
     void SetFromMeshOfCubes
     (const POLYMESH<VTYPE2,NTYPE2> & polymesh, const CUBE_TYPE & cube);
-
-    /// Set adjacency poly from mesh of simplices.
-    /// @param polymesh Mesh of simplices.
-    template <typename VTYPE2, typename NTYPE2>
-    void SetFromMeshOfSimplices
-    (const POLYMESH<VTYPE2,NTYPE2> & polymesh);
   };
 
 
@@ -1361,10 +1379,7 @@ namespace IJK {
     std::vector<PTYPE> adj_poly(num_poly*num_cube_facets);
     IJK::PROCEDURE_ERROR error("POLYMESH_ADJACENCY::SetFromMeshOfCubes");
 
-    this->SetNumLists(num_poly);
-    this->SetListLengths(MAX_NUM_FACETS);
-    this->SetFirstElement();
-    this->AllocArrayElement();
+    this->CreateUniformLengthLists(MAX_NUM_FACETS,num_poly);
 
     facets.SetFromMeshOfCubes(polymesh, cube);
     facets.SortVert();
@@ -1749,23 +1764,54 @@ namespace IJK {
   // **************************************************
 
   template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
-  template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+  template <typename VTYPE2, typename NTYPE2>
   void FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::
-  SetFromMeshOfCubes(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
-                     const CUBE_TYPE & cube)
+  SetFrom2DMesh(const POLYMESH<VTYPE2,NTYPE2> & polymesh)
   {
-    std::vector<VTYPE> facet_vertices(cube.NumFacetVertices());
+    const NTYPE NUM_VERT_PER_EDGE(2);
+    NTYPE edge_endpoint[NUM_VERT_PER_EDGE];
 
+    if (polymesh.NumPoly() == 0) { return; }
+ 
     for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-      for (NTYPE jf = 0; jf < cube.NumFacets(); jf++) {
-        for (NTYPE k = 0; k < cube.NumFacetVertices(); k++) {
-          const VTYPE kv = cube.FacetVertex(jf, k);
-          facet_vertices[k] = polymesh.Vertex(ipoly, kv);
-        }
-        const NTYPE ifacet = this->NumFacets();
-        this->AddPolytope(facet_vertices);
-        this->poly_data[ifacet].poly_containing_face = ipoly;
-        this->poly_data[ifacet].face_index = jf;
+      for (NTYPE j0 = 0; j0 < polymesh.NumPolyVert(ipoly); j0++) {
+        const NTYPE j1 = (j0+1)%polymesh.NumPolyVert(ipoly);
+        edge_endpoint[0] = polymesh.Vertex(ipoly, j0);
+        edge_endpoint[1] = polymesh.Vertex(ipoly, j1);
+        
+        const NTYPE iedge = this->NumFacets();
+        this->AddPolytope(edge_endpoint, NUM_VERT_PER_EDGE);
+        this->poly_data[iedge].poly_containing_face = ipoly;
+        this->poly_data[iedge].face_index = j0;
+      }
+    }
+  }
+
+
+  template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
+  template <typename VTYPE2, typename NTYPE2>
+  void FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::
+  SetFrom2DMesh(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                const std::vector<bool> & flag_skip_poly)
+  {
+    const NTYPE NUM_VERT_PER_EDGE(2);
+    NTYPE edge_endpoint[NUM_VERT_PER_EDGE];
+
+    if (polymesh.NumPoly() == 0) { return; }
+ 
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+
+      if (flag_skip_poly[ipoly]) { continue; }
+
+      for (NTYPE j0 = 0; j0 < polymesh.NumPolyVert(ipoly); j0++) {
+        const NTYPE j1 = (j0+1)%polymesh.NumPolyVert(ipoly);
+        edge_endpoint[0] = polymesh.Vertex(ipoly, j0);
+        edge_endpoint[1] = polymesh.Vertex(ipoly, j1);
+        
+        const NTYPE iedge = this->NumFacets();
+        this->AddPolytope(edge_endpoint, NUM_VERT_PER_EDGE);
+        this->poly_data[iedge].poly_containing_face = ipoly;
+        this->poly_data[iedge].face_index = j0;
       }
     }
   }
@@ -1798,6 +1844,29 @@ namespace IJK {
             std::swap(facet_vertices[NUM_VERT_PER_FACET-2],
                       facet_vertices[NUM_VERT_PER_FACET-1]);
           }
+        }
+        const NTYPE ifacet = this->NumFacets();
+        this->AddPolytope(facet_vertices);
+        this->poly_data[ifacet].poly_containing_face = ipoly;
+        this->poly_data[ifacet].face_index = jf;
+      }
+    }
+  }
+
+
+  template <typename VTYPE, typename NTYPE, typename FACET_INFO_TYPE>
+  template <typename VTYPE2, typename NTYPE2, typename CUBE_TYPE>
+  void FACET_LIST_BASE<VTYPE,NTYPE,FACET_INFO_TYPE>::
+  SetFromMeshOfCubes(const POLYMESH<VTYPE2,NTYPE2> & polymesh,
+                     const CUBE_TYPE & cube)
+  {
+    std::vector<VTYPE> facet_vertices(cube.NumFacetVertices());
+
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+      for (NTYPE jf = 0; jf < cube.NumFacets(); jf++) {
+        for (NTYPE k = 0; k < cube.NumFacetVertices(); k++) {
+          const VTYPE kv = cube.FacetVertex(jf, k);
+          facet_vertices[k] = polymesh.Vertex(ipoly, kv);
         }
         const NTYPE ifacet = this->NumFacets();
         this->AddPolytope(facet_vertices);
@@ -1949,7 +2018,7 @@ namespace IJK {
   }
 
 
-  /// Compute vertex link in mesh of cubes.
+  /// Compute vertex link in hexahedral mesh.
   /// @param cube Cube information.
   /// @pre cube has same dimension as cubes in mesh.
   /// @param[out] link_mesh Polygonal mesh of links.
@@ -1957,7 +2026,7 @@ namespace IJK {
   ///   upper-left, upper_right, NOT in clockwise or counter-clockwise order.
   template <typename POLYMESH_TYPE, typename VERTEX_POLY_INCIDENCE_TYPE,
             typename VTYPE, typename CUBE_TYPE, typename POLYMESH2_TYPE>
-  void compute_vertex_link_in_cube_mesh
+  void compute_vertex_link_in_hex_mesh
   (const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
    const VTYPE iv,
@@ -1987,6 +2056,42 @@ namespace IJK {
           link_mesh.AddPolytope(facet_vertex);
         }
       }
+    }
+  }
+
+
+  /// Compute vertex link in tetrahedral mesh.
+  /// @param[out] link_mesh Polygonal mesh of links.
+  template <typename POLYMESH_TYPE, typename VERTEX_POLY_INCIDENCE_TYPE,
+            typename VTYPE, typename POLYMESH2_TYPE>
+  void compute_vertex_link_in_tet_mesh
+  (const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+   const VTYPE iv,
+   POLYMESH2_TYPE & link_mesh)
+  {
+    typedef typename POLYMESH_TYPE::NUMBER_TYPE NTYPE;
+
+    const NTYPE num_vertices_per_tet(4);
+    const NTYPE num_vertices_per_facet(num_vertices_per_tet-1);
+    std::vector<VTYPE> facet_vertex(num_vertices_per_facet);
+
+    link_mesh.Clear();
+
+    for (NTYPE j = 0; j < vertex_info.NumIncidentPoly(iv); j++) {
+      const NTYPE jpoly = vertex_info.IncidentPoly(iv,j);
+
+      NTYPE k = 0;
+      for (NTYPE k2 = 0; k2 < num_vertices_per_tet; k2++) {
+
+        const VTYPE kv = polymesh.Vertex(jpoly, k2);
+        if (kv != iv) {
+          facet_vertex[k] = kv;
+          k++;
+        }
+      }
+
+      link_mesh.AddPolytope(facet_vertex);
     }
   }
 

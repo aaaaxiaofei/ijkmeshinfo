@@ -2287,7 +2287,6 @@ namespace IJK {
   // Write .ply file with colored objects
   // ******************************************
 
-
   /// Output .ply file header with faces colored.
   /// @param out = Output stream.
   /// @param dim = Dimension of vertices.
@@ -2372,6 +2371,7 @@ namespace IJK {
                              poly2_rgb);
   }
 
+
   /// Output .ply file with colored faces.
   /// - Two types of polytopes.
   /// - C++ STL vector format for coord[], poly1_vlist[], poly2_vlist[]
@@ -2424,6 +2424,7 @@ namespace IJK {
       (out, num_poly_vert, poly_vert, first_poly_vert, num_poly, poly_rgb);
 
   }
+
 
   // ******************************************
   // Write .ply edge file
@@ -2488,6 +2489,7 @@ namespace IJK {
 
   }
 
+
   /// Output .ply edge file.
   /// - C++ STL vector format for coord[] and edge_vert[].
   template <typename CTYPE, typename VTYPE> void ijkoutEdgePLY
@@ -2546,6 +2548,7 @@ namespace IJK {
     out << "ASCII" << endl;
   }
 
+
   /// Output cell types.
   inline void ijkoutCellTypesVTK
   (std::ostream & out, const int num_cells, const int itype)
@@ -2558,14 +2561,26 @@ namespace IJK {
     }
   }
 
-  /// Output cell types.
-  inline void ijkoutHexahedralTypesVTK
+
+  /// Output hexahedra types.
+  inline void ijkoutHexahedraTypesVTK
   (std::ostream & out, const int num_hex)
   {
-    const int HEXAHEDRAL_TYPE(12);
+    const int HEXAHEDRON_TYPE(12);
 
-    ijkoutCellTypesVTK(out, num_hex, HEXAHEDRAL_TYPE);
+    ijkoutCellTypesVTK(out, num_hex, HEXAHEDRON_TYPE);
   }
+
+
+  /// Output tetrahedra types.
+  inline void ijkoutTetrahedraTypesVTK
+  (std::ostream & out, const int num_hex)
+  {
+    const int TETRAHEDRON_TYPE(10);
+
+    ijkoutCellTypesVTK(out, num_hex, TETRAHEDRON_TYPE);
+  }
+
 
   /// Output hex vertices, reordering in VTK order.
   template <typename VTYPE, typename NTYPE> void ijkoutHexahedraVerticesVTK
@@ -2588,8 +2603,8 @@ namespace IJK {
       out << " " << hex_i_vert[6];
       out << endl;
     }
-
   }
+
 
   /// Output hexahedra.
   /// @param flag_reorder_hex_vertices If true, reorder hex vertices
@@ -2633,8 +2648,9 @@ namespace IJK {
     }
     out << endl;
 
-    ijkoutHexahedralTypesVTK(out, numh);
+    ijkoutHexahedraTypesVTK(out, numh);
   }
+
 
   /// Output hexahedra.
   /// - C++ STL vector format for coord[] and hexahedra_vert[].
@@ -2657,6 +2673,65 @@ namespace IJK {
     ijkoutHexahedraVTK
       (out, dataset_name, dim, vector2pointer(coord), numc,
        vector2pointer(hexahedra_vert), num_hex, flag_reorder_hex_vertices);
+  }
+
+
+  /// Output tetrahedra.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutTetrahedraVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * tetrahedra_vert, const NTYPE1 num_tet)
+  {
+    const int NUM_VERT_PER_TETRAHEDRON(4);
+    IJK::PROCEDURE_ERROR error("ijkoutTetrahedraVTK");
+
+    if (dim != 3) {
+      error.AddMessage
+        ("Programming error.  Only dimension 3 available for .vtk files.");
+      throw error;
+    }
+
+    using std::endl;
+
+    ijkoutVTKheader(out, dataset_name, dim);
+
+    out << "DATASET UNSTRUCTURED_GRID" << endl;
+    out << endl;
+
+    out << "POINTS " << numv << " float" << endl;
+    ijkoutVertexCoord(out, dim, coord, numv);
+    out << endl;
+
+    out << "CELLS " << num_tet << " " 
+        << num_tet*(1+NUM_VERT_PER_TETRAHEDRON) << endl;
+
+    ijkoutPolygonVertices
+      (out, NUM_VERT_PER_TETRAHEDRON, tetrahedra_vert, num_tet);
+    out << endl;
+
+    ijkoutTetrahedraTypesVTK(out, num_tet);
+  }
+
+
+  /// Output tetrahedra
+  /// - C++ STL vector format for coord[] and tetrahedra_vert[].
+  template <typename CTYPE, typename VTYPE>
+  void ijkoutTetrahedraVTK
+  (std::ostream & out, const char * dataset_name, const int dim,
+   const std::vector<CTYPE> & coord, 
+   const std::vector<VTYPE> & tetrahedra_vert)
+  {
+    typedef typename std::vector<CTYPE>::size_type SIZEC_TYPE;
+    typedef typename std::vector<VTYPE>::size_type SIZEV_TYPE;
+
+    const SIZEV_TYPE NUM_VERT_PER_TETRAHEDRON(4);
+    const SIZEC_TYPE numc = coord.size()/dim;
+    const SIZEV_TYPE num_tet = tetrahedra_vert.size()/NUM_VERT_PER_TETRAHEDRON;
+
+    ijkoutTetrahedraVTK
+      (out, dataset_name, dim, vector2pointer(coord), numc,
+       vector2pointer(tetrahedra_vert), num_tet);
   }
 
 

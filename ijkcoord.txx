@@ -1771,7 +1771,7 @@ namespace IJK {
 
 
   // **************************************************
-  /// @name 2D and 3D Determinants
+  /// @name 2D and 3D Matrix operations
   // **************************************************
 
   ///@{
@@ -1799,6 +1799,125 @@ namespace IJK {
     result += p1[0] * D;
     determinant_2x2(p0[1], p0[2], p1[1], p1[2], D);
     result += p2[0] * D;
+  }
+
+
+  /// Return the square of the Froebenius norm of a 3x3 matrix.
+  template <typename COORD_TYPE, typename RESULT_TYPE>
+  inline void compute_froebenius_norm_squared_3x3
+  (const COORD_TYPE p0[3], const COORD_TYPE p1[3],
+   const COORD_TYPE p2[3], RESULT_TYPE & result)
+  {
+    RESULT_TYPE x;
+    compute_sum_of_squares_3D(p0, result);
+    compute_sum_of_squares_3D(p1, x);
+    result += x;
+    compute_sum_of_squares_3D(p2, x);
+    result += x;
+  }
+
+
+  /// Return the Froebenius norm of a 3x3 matrix.
+  template <typename COORD_TYPE, typename RESULT_TYPE>
+  inline void compute_froebenius_norm_3x3
+  (const COORD_TYPE p0[3], const COORD_TYPE p1[3],
+   const COORD_TYPE p2[3], RESULT_TYPE & result)
+  {
+    compute_froebenius_norm_squared_3x3(p0, p1, p2, result);
+    result = std::sqrt(result);
+  }
+
+
+  /// Transpose a 3x3 matrix.
+  template <typename COORD_TYPE>
+  void transpose_3x3
+  (COORD_TYPE p0[3], COORD_TYPE p1[2], COORD_TYPE p2[3])
+  {
+    std::swap(p0[1], p1[0]);
+    std::swap(p0[2], p2[0]);
+    std::swap(p1[2], p2[1]);
+  }
+
+
+  /// Return the first row of the co-factor matrix of a 3x3 matrix.
+  template <typename COORD_TYPEA, typename COORD_TYPEB>
+  void co_factor_3x3_row1
+  (const COORD_TYPEA p0[3], const COORD_TYPEA p1[2], 
+   const COORD_TYPEA p2[3], COORD_TYPEB q0[3])
+  {
+    const int DIM3 = 3;
+
+    for (int j0 = 0; j0 < DIM3; j0++) {
+      const int j1 = (j0+1)%DIM3;
+      const int j2 = (j0+2)%DIM3;
+      determinant_2x2(p1[j1], p1[j2], p2[j1], p2[j2], q0[j0]);
+    }
+  }
+
+
+  /// Return the co-factor matrix of a 3x3 matrix.
+  template <typename COORD_TYPEA, typename COORD_TYPEB>
+  void co_factor_3x3
+  (const COORD_TYPEA p0[3], const COORD_TYPEA p1[2], 
+   const COORD_TYPEA p2[3],
+   COORD_TYPEB q0[3], COORD_TYPEB q1[2], COORD_TYPEB q2[3])
+  {
+    co_factor_3x3_row1(p0, p1, p2, q0);
+    co_factor_3x3_row1(p1, p2, p0, q1);
+    co_factor_3x3_row1(p2, p0, p1, q2);
+  }
+
+
+  /// Return the transpose of the co-factor matrix of a 3x3 matrix.
+  template <typename COORD_TYPEA, typename COORD_TYPEB>
+  void transpose_co_factor_3x3
+  (const COORD_TYPEA p0[3], const COORD_TYPEA p1[2], 
+   const COORD_TYPEA p2[3],
+   COORD_TYPEB q0[3], COORD_TYPEB q1[2], COORD_TYPEB q2[3])
+  {
+    co_factor_3x3(p0, p1, p2, q0, q1, q2);
+    transpose_3x3(q0, q1, q2);
+  }
+
+
+  /*!
+   *  Compute inverse of a 3x3 matrix.
+   *  If absolute values of the determinant is less than or equal to
+   *     max_small_determinant, then result is set to the transpose
+   *     of the co-factor matrix.
+   *  @param[out] determinant Determinant.
+   *  @param[out] flag_zero True if determinant is less
+   *     than or equal to max_small_determinant.
+   *  @pre max_small_determinant >= 0.
+   */
+  template <typename COORD_TYPEA, typename COORD_TYPEB,
+            typename MTYPE, typename DET_TYPE>
+  void compute_inverse_3x3
+  (const COORD_TYPEA p0[3], const COORD_TYPEA p1[2], 
+   const COORD_TYPEA p2[3],
+   const MTYPE max_small_determinant, 
+   COORD_TYPEB q0[3], COORD_TYPEB q1[2], COORD_TYPEB q2[3],
+   DET_TYPE & determinant, bool & flag_zero)
+  { 
+    const int DIM3(3);
+    DET_TYPE D;
+
+    // Initialize flag_zero.
+    flag_zero = false;
+
+    transpose_co_factor_3x3(p0, p1, p2, q0, q1, q2);
+    determinant_3x3(p0, p1, p2, determinant);
+    D = determinant;
+    if (D < 0) { D = -D; }
+
+    if (D <= max_small_determinant) {
+      flag_zero = true;
+    }
+    else {
+      divide_coord(DIM3, determinant, q0, q0);
+      divide_coord(DIM3, determinant, q1, q1);
+      divide_coord(DIM3, determinant, q2, q2);
+    }
   }
 
 

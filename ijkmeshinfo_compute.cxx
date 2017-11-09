@@ -34,23 +34,21 @@
 
 // Compute min/max polygon angles.
 // @param flag_internal If true, compute angles for interior polygons.
-// @param num_poly_edges If num_poly_edges > 0, compute angles only
-//          for polygons with num_poly_edges.
-// @param num_poly_edges If num_poly_edges = 0, compute angles 
+// @param num_poly_vert If num_poly_vert > 0, compute angles only
+//          for polygons with num_poly_vert.
+// @param num_poly_edges If num_poly_vert = 0, compute angles 
 //          for all polygons.
 // @pre mesh_dimension == 2.
 void IJKMESHINFO::compute_min_max_polygon_angles
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
- const bool flag_internal, const int num_poly_edges,
+ const bool flag_internal, const int num_poly_vert,
  ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle,
  int & poly_with_min_angle, int & poly_with_max_angle)
 {
   const int dimension = mesh_data.dimension;
   IJK::PROCEDURE_ERROR error("compute_min_max_polygon_angles");
 
-  COORD_TYPE cos_min = -1;
-  COORD_TYPE cos_max = 1;
   poly_with_min_angle = 0;
   poly_with_max_angle = 0;
 
@@ -58,41 +56,26 @@ void IJKMESHINFO::compute_min_max_polygon_angles
   if (flag_internal) 
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  int num_angle;
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-
-    if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
-
-    if (num_poly_edges > 0) {
-      if (polymesh.NumPolyVert(ipoly) != num_poly_edges) 
-        { continue; }
-    }
-
-    if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
-        { continue; } 
-    }
-
-    COORD_TYPE cos_min_i, cos_max_i;
-    IJK::compute_cos_min_max_polygon_angles
-      (dimension, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
-       vertex_coord, cos_min_i, cos_max_i, num_angle);
-
-    if (num_angle > 0) {
-      if (cos_min_i > cos_min) {
-        cos_min = cos_min_i;
-        poly_with_min_angle = ipoly;
-      }
-
-      if (cos_max_i < cos_max) {
-        cos_max = cos_max_i;
-        poly_with_max_angle = ipoly;
-      }
-    }
+  COORD_TYPE min_cos, max_cos;
+  if (num_poly_vert == 0) {
+    // Note: Poly with max angle has min_cos.
+    //       Poly with min angle has max_cos.
+    compute_min_max_values
+      (mesh_data, polymesh, vertex_coord, flag_internal, 
+       1, -1, min_cos, max_cos, poly_with_max_angle, poly_with_min_angle,
+       compute_min_max_cos_polygon_angles);
+  }
+  else {
+    // Note: Poly with max angle has min_cos.
+    //       Poly with min angle has max_cos.
+    compute_min_max_values_select_poly_by_numv
+      (mesh_data, polymesh, vertex_coord, flag_internal, 1, -1, num_poly_vert,
+       min_cos, max_cos, poly_with_max_angle, poly_with_min_angle,
+       compute_min_max_cos_polygon_angles);
   }
 
-  min_angle = std::acos(cos_min) * 180.0/M_PI;
-  max_angle = std::acos(cos_max) * 180.0/M_PI;
+  min_angle = std::acos(max_cos) * 180.0/M_PI;
+  max_angle = std::acos(min_cos) * 180.0/M_PI;
 }
 
 
@@ -168,6 +151,23 @@ void IJKMESHINFO::compute_min_max_polygon_angles
 }
 
 
+// Compute min/max cosine of the angles of a single polygon.
+// - Note: acos(min_cos) is the max angle.
+//         acos(max_cos) is the min angle.
+void IJKMESHINFO::compute_min_max_cos_polygon_angles
+(const MESH_DATA & mesh_data, 
+ const VERTEX_INDEX poly_vert[], const int num_vert,
+ const COORD_TYPE * vertex_coord,
+ COORD_TYPE & min_cos, COORD_TYPE & max_cos, int & num_angle)
+{
+  const int dimension = mesh_data.dimension;
+
+  IJK::compute_cos_min_max_polygon_angles
+    (dimension, poly_vert, num_vert, vertex_coord, 
+     max_cos, min_cos, num_angle);
+}
+
+
 // Compute number of angles less than or equal to min_angle and
 //   greater than or equal to max_angle.
 // @pre mesh_dimension == 2.
@@ -217,7 +217,7 @@ void IJKMESHINFO::compute_num_polygon_angles
 // Compute number of dihedral angles less than or equal to min_angle and
 //   greater than or equal to max_angle.
 // @pre mesh_dimension == 3.
-void IJKMESHINFO::compute_num_dihedral_angles
+void IJKMESHINFO::compute_num_tetmesh_dihedral_angles
 (const int dimension,
  const int mesh_dimension, 
  const POLYMESH_TYPE & polymesh,
@@ -444,7 +444,7 @@ void IJKMESHINFO::compute_num_tetrahedra_facet_angles
 // **************************************************
 
 // Compute min/max dihedral angles of tetrahedra.
-void IJKMESHINFO::compute_min_max_dihedral_angles
+void IJKMESHINFO::compute_min_max_tetmesh_dihedral_angles
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
  const bool flag_internal,
@@ -497,7 +497,7 @@ void IJKMESHINFO::compute_min_max_dihedral_angles
 }
 
 
-void IJKMESHINFO::compute_min_max_dihedral_angles
+void IJKMESHINFO::compute_min_max_tetmesh_dihedral_angles
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
  const bool flag_internal,
@@ -505,7 +505,7 @@ void IJKMESHINFO::compute_min_max_dihedral_angles
 {
   int poly_with_min_angle, poly_with_max_angle;
 
-  compute_min_max_dihedral_angles
+  compute_min_max_tetmesh_dihedral_angles
     (mesh_data, polymesh, vertex_coord, flag_internal,
      min_angle, max_angle, poly_with_min_angle, poly_with_max_angle);
 }
@@ -554,6 +554,44 @@ void IJKMESHINFO::compute_min_max_polygon_edge_lengths
      compute_min_max_polygon_edge_lengths);
 }
 
+// Compute min/max edge lengths of polygons.
+void IJKMESHINFO::compute_min_max_polygon_edge_lengths_select_poly_by_numv
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal, const int num_poly_vert,
+ COORD_TYPE & min_length, COORD_TYPE & max_length,
+ int & poly_with_min_edge_length, int & poly_with_max_edge_length)
+{
+  if (num_poly_vert == 0) {
+    compute_min_max_polygon_edge_lengths
+      (mesh_data, polymesh, vertex_coord,
+       flag_internal, min_length, max_length,
+       poly_with_min_edge_length, poly_with_max_edge_length);
+  }
+  else {
+    compute_min_max_values_select_poly_by_numv
+      (mesh_data, polymesh, vertex_coord, flag_internal,
+       0, 0, num_poly_vert, min_length, max_length,
+       poly_with_min_edge_length, poly_with_max_edge_length,
+       compute_min_max_polygon_edge_lengths);
+  }
+}
+
+// Compute min/max edge lengths of polygons.
+// - Version which does not return polygons with min/max edge lengths.
+void IJKMESHINFO::compute_min_max_polygon_edge_lengths_select_poly_by_numv
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal, const int num_poly_vert,
+ COORD_TYPE & min_length, COORD_TYPE & max_length)
+{
+  int poly_with_min_edge_length, poly_with_max_edge_length;
+
+  compute_min_max_polygon_edge_lengths_select_poly_by_numv
+    (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_vert,
+     min_length, max_length, 
+     poly_with_min_edge_length, poly_with_max_edge_length);
+}
 
 // Compute min/max edge lengths of one polygon.
 void IJKMESHINFO::compute_min_max_polygon_edge_lengths
@@ -623,9 +661,9 @@ void IJKMESHINFO::compute_min_max_tetrahedra_edge_lengths
 
 // Compute min/max edge lengths of one tetrahedron.
 void IJKMESHINFO::compute_min_max_tetrahedron_edge_lengths
-(const MESH_DATA & mesh_data,
+(const MESH_DATA & mesh_data, 
  const VERTEX_INDEX tet_vert[], const int num_vert,
- const COORD_TYPE * vertex_coord,
+ const COORD_TYPE * vertex_coord, 
  COORD_TYPE & min_length, COORD_TYPE & max_length,
  int & num_lengths)
 {
@@ -647,6 +685,71 @@ void IJKMESHINFO::compute_min_max_tetrahedron_edge_lengths
 
       const VERTEX_INDEX iv0 = tet_vert[i0];
       const VERTEX_INDEX iv1 = tet_vert[i1];
+
+      const COORD_TYPE * v0coord = vertex_coord+iv0*dimension;
+      const COORD_TYPE * v1coord = vertex_coord+iv1*dimension;
+
+      IJK::compute_distance_squared
+        (dimension, v0coord, v1coord, edge_length_squared);
+
+      if (!flag_set || edge_length_squared < min_edge_length_squared) 
+        { min_edge_length_squared = edge_length_squared; }
+      if (!flag_set || edge_length_squared > max_edge_length_squared) 
+        { max_edge_length_squared = edge_length_squared; }
+
+      flag_set = true;
+      num_lengths++;
+    }
+  }
+
+  if (num_lengths > 0) {
+    min_length = std::sqrt(min_edge_length_squared);
+    max_length = std::sqrt(max_edge_length_squared);
+  }
+}
+
+
+// Compute min/max edge lengths of a polymesh of simplices.
+void IJKMESHINFO::compute_min_max_simplices_edge_lengths
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_length, COORD_TYPE & max_length,
+ int & poly_with_min_edge_length, int & poly_with_max_edge_length)
+{
+  compute_min_max_values
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     0, 0, min_length, max_length,
+     poly_with_min_edge_length, poly_with_max_edge_length,
+     compute_min_max_simplex_edge_lengths);
+}
+
+
+// Compute min/max edge lengths of one simplex.
+void IJKMESHINFO::compute_min_max_simplex_edge_lengths
+(const MESH_DATA & mesh_data,
+ const VERTEX_INDEX simplex_vert[], const int num_vert,
+ const COORD_TYPE * vertex_coord,
+ COORD_TYPE & min_length, COORD_TYPE & max_length,
+ int & num_lengths)
+{
+  const int dimension = mesh_data.dimension;
+  COORD_TYPE edge_length_squared;
+
+  // Initialize.
+  min_length = 0;
+  max_length = 0;
+
+  COORD_TYPE min_edge_length_squared = 0;
+  COORD_TYPE max_edge_length_squared = 0;
+  num_lengths = 0;
+
+  bool flag_set = false;
+  for (int i0 = 0; i0 < num_vert; i0++) {
+    for (int i1 = i0+1; i1 < num_vert; i1++) {
+
+      const VERTEX_INDEX iv0 = simplex_vert[i0];
+      const VERTEX_INDEX iv1 = simplex_vert[i1];
 
       const COORD_TYPE * v0coord = vertex_coord+iv0*dimension;
       const COORD_TYPE * v1coord = vertex_coord+iv1*dimension;

@@ -669,7 +669,7 @@ void IJKMESHINFO::output_min_max_dihedral_angle
   output_min_max_values
     (cout, mesh_data, polymesh, vertex_coord,
      io_info.flag_output_min_angle, io_info.flag_output_max_angle,
-     flag_internal, "dihedral angle", compute_min_max_dihedral_angles);
+     flag_internal, "dihedral angle", compute_min_max_tetmesh_dihedral_angles);
 }
 
 
@@ -692,7 +692,7 @@ void IJKMESHINFO::output_dihedral_angle_count
 
   int num_le, num_ge;
   if (io_info.angle_le.IsSet() || io_info.angle_ge.IsSet()) {
-    compute_num_dihedral_angles
+    compute_num_tetmesh_dihedral_angles
       (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal, 
        io_info.angle_le.Value(), io_info.angle_ge.Value(), num_le, num_ge);
 
@@ -727,7 +727,7 @@ void IJKMESHINFO::output_tetrahedra_with_min_dihedral_angle
   output_polytopes_with_min_value
     (cout, mesh_data, polymesh, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
-     compute_min_max_dihedral_angles,
+     compute_min_max_tetmesh_dihedral_angles,
      compute_min_max_tetrahedron_dihedral_angles);
 }
 
@@ -747,7 +747,7 @@ void IJKMESHINFO::output_tetrahedra_with_max_dihedral_angle
   output_polytopes_with_max_value
     (cout, mesh_data, polymesh, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
-     compute_min_max_dihedral_angles,
+     compute_min_max_tetmesh_dihedral_angles,
      compute_min_max_tetrahedron_dihedral_angles);
 
 }
@@ -892,6 +892,47 @@ void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
 // OUTPUT EDGE LENGTH ROUTINES
 // **************************************************
 
+void IJKMESHINFO::output_min_max_polygon_edge_lengths
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal,
+ const int num_poly_vert)
+{
+  const int dimension = mesh_data.dimension;
+  const char * polygon_descriptor;
+  IJK::PROCEDURE_ERROR error("output_min_max_polygon_edge_lengths");
+
+  string polyname = "polygon";
+
+  if (!check_mesh_dimension<DIM2>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  COORD_TYPE min_edge_length, max_edge_length;
+
+  compute_min_max_polygon_edge_lengths_select_poly_by_numv
+    (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_vert, 
+     min_edge_length, max_edge_length);
+
+
+  get_polygon_name(num_poly_vert, polyname);
+
+  if (io_info.flag_output_min_edge_length) {
+    cout << "Min ";
+    if (flag_internal) { cout << "internal "; }
+    cout << polyname << " edge length: ";
+    cout << min_edge_length << endl; 
+  }
+
+  if (io_info.flag_output_max_edge_length) {
+    cout << "Max ";
+    if (flag_internal) { cout << "internal "; }
+    cout << polyname << " edge length: ";
+    cout << max_edge_length << endl; 
+  }
+}
+
+
 void IJKMESHINFO::output_min_max_tetrahedra_edge_lengths
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
@@ -899,9 +940,8 @@ void IJKMESHINFO::output_min_max_tetrahedra_edge_lengths
 {
   const int dimension = mesh_data.dimension;
   const int mesh_dimension = mesh_data.mesh_dimension;
-  IJK::PROCEDURE_ERROR error("output_min_max_tetrahedron_edge_lengths");
+  IJK::PROCEDURE_ERROR error("output_min_max_tetrahedra_edge_lengths");
 
-  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
@@ -909,6 +949,25 @@ void IJKMESHINFO::output_min_max_tetrahedra_edge_lengths
     (cout, mesh_data, polymesh, vertex_coord,
      io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
      flag_internal, "edge length", compute_min_max_tetrahedra_edge_lengths);
+}
+
+
+void IJKMESHINFO::output_min_max_simplices_edge_lengths
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+  IJK::PROCEDURE_ERROR error("output_min_max_simplices_edge_lengths");
+
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord,
+     io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
+     flag_internal, "edge length", compute_min_max_simplices_edge_lengths);
 }
 
 
@@ -1206,6 +1265,8 @@ void IJKMESHINFO::print_poly_index_and_vert
   out << suffix;
 }
 
+
+
 // **************************************************
 // USAGE/HELP MESSAGES
 // **************************************************
@@ -1217,7 +1278,7 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-mesh_dim {mdim}] [-reverse_orient]" << endl;
   cerr << "  [-vertex {vnum}] [-simplex {snum}] [-poly {pnum}]"
        << endl;
-  cerr << "  [-vlist] [-plist] [-manifold | -oriented_manifold]" << endl;
+  cerr << "  [-vlist] [-plist] [-manifold | -oriented_manifold | -check_facetI]" << endl;
   cerr << "  [-containsv {vnum}] [-containse {end0} {end1}]" << endl;
   cerr << "  [-minc \"min coord\"] [-maxc \"max coord\"]" << endl;
   cerr << "  [-min_numv <N>] [-max_numv <N>]" << endl;
@@ -1252,12 +1313,20 @@ void IJKMESHINFO::help_msg()
   cerr << "     Prints only vertices with coordinates between min coord and max coord."
        << endl;
   cerr << "  -plist:             Print list of polygons/polytopes." << endl;
-  cerr << "     Prints only polygons/polytopes with number of vertices between"
+  cerr << "     Print polygons with min/max angles, edge lengths, and"
+       << endl
+       << "       Jacobian determinants." << endl;
+  cerr << "     If -min_numv or -max_numv is set, prints only "
+       << endl
+       << "       polygons/polytopes with number of vertices between"
        << endl;
   cerr << "       <min_numv> and <max_numv>." << endl;
   cerr << "  -manifold:          Print manifold information." << endl;
   cerr << "  -oriented_manifold: Print manifold and orientation information."
        << endl;
+  cerr << "  -check_facetI:      Check facet intersections." << endl
+       << "     Check for hexahedra facets which intersect in exactly two edges." << endl
+       << "     Options -manifold and -oriented_manifold always perform this check." << endl;
   cerr << "  -selfI:             Print self intersections." << endl;
   cerr << "  -containsv {vnum}:  Print list of simplices containing vertex {vnum}."
        << endl;

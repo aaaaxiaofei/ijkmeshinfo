@@ -80,10 +80,10 @@ namespace IJKMESHINFO {
     bool is_duplicate;
 
     /// True if polytope contains a non-manifold edge.
-    bool contains_nonmanifold_edge;
+    bool contains_non_manifold_edge;
 
     /// True if polytope contains a non-manifold facet.
-    bool contains_nonmanifold_facet;
+    bool contains_non_manifold_facet;
 
     /// True if polytope contains a boundary facet.
     bool contains_boundary_facet;
@@ -111,11 +111,11 @@ namespace IJKMESHINFO {
 
     /// Return true if polytope contains a non-manifold edge.
     bool ContainsNonManifoldEdge() const
-    { return(contains_nonmanifold_edge); }
+    { return(contains_non_manifold_edge); }
 
     /// Return true if polytope contains a non-manifold facet.
     bool ContainsNonManifoldFacet() const
-    { return(contains_nonmanifold_facet); }
+    { return(contains_non_manifold_facet); }
 
     /// Return true if polytope contains a boundary facet.
     bool ContainsBoundaryFacet() const
@@ -146,10 +146,10 @@ namespace IJKMESHINFO {
 
     int num_poly_with_duplicate_vertices;
     int num_duplicate_poly;
-    int num_nonmanifold_facets;
-    int num_nonmanifold_edges;
-    int num_nonmanifold_vertices;
-    int num_deep_nonmanifold_vertices;
+    int num_non_manifold_facets;
+    int num_non_manifold_edges;
+    int num_non_manifold_vertices;
+    int num_deep_non_manifold_vertices;
     int num_poly_with_orientation_conflicts;
     int num_hex_facet_pairs_sharing_exactly_two_edges;
 
@@ -182,7 +182,7 @@ namespace IJKMESHINFO {
     bool are_boundary_facets_identified;
 
     /// True if nonmanifold facets have been identified.
-    bool are_nonmanifold_facets_identified;
+    bool are_non_manifold_facets_identified;
 
     /// True if hex sharing exactly two facets edges have been identified.
     bool are_hex_sharing_exactly_two_facet_edges_identified;
@@ -292,6 +292,7 @@ namespace IJKMESHINFO {
        const double normalization_factor, const NTYPE irow) const;
   };
 
+
   class ANGLE_TABLE:public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
 
   public:
@@ -321,6 +322,78 @@ namespace IJKMESHINFO {
        const NUM_TYPE width) const;
     void WriteNormalizedColumnData
       (std::ostream & out, const std::string & separator, const NUM_TYPE width,
+       const double normalization_factor) const;
+
+  };
+
+
+  class EDGE_LENGTH_TABLE:
+    public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
+
+  public:
+    static const NUM_TYPE NUM_ROWS = 30;
+
+    DATA_COLUMN<NUM_TYPE, COORD_TYPE> edge_length;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> min_edge_length_freq;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> max_edge_length_freq;
+
+  public:
+    EDGE_LENGTH_TABLE():
+      IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE>(NUM_ROWS),
+      edge_length("edge-length", NUM_ROWS), 
+      min_edge_length_freq("min-edge-length", NUM_ROWS),
+      max_edge_length_freq("max-edge-length", NUM_ROWS)
+        {};
+
+    // set routines
+    void HideAllExceptEdgeLengthColumn();
+    void ComputeSum();
+
+    // write routines
+    void WriteColumnLabels
+      (std::ostream & out, const std::string & separator) const;
+    void WriteColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width) const;
+    void WriteNormalizedColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width,
+       const double normalization_factor) const;
+
+  };
+
+
+  class JACOBIAN_TABLE:
+    public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
+
+  public:
+    static const NUM_TYPE NUM_ROWS = 30;
+
+    DATA_COLUMN<NUM_TYPE, COORD_TYPE> jacobian;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> min_jacobian_freq;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> max_jacobian_freq;
+
+  public:
+    JACOBIAN_TABLE():
+      IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE>(NUM_ROWS),
+      jacobian("jacobian", NUM_ROWS), 
+      min_jacobian_freq("min-jacobian", NUM_ROWS),
+      max_jacobian_freq("max-jacobian", NUM_ROWS)
+        {};
+
+    // set routines
+    void HideAllExceptJacobianColumn();
+    void ComputeSum();
+
+    // write routines
+    void WriteColumnLabels
+      (std::ostream & out, const std::string & separator) const;
+    void WriteColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width) const;
+    void WriteNormalizedColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width,
        const double normalization_factor) const;
 
   };

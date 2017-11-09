@@ -215,6 +215,29 @@ namespace IJK {
 
 
   // **************************************************
+  /// @name GET FILENAME
+  // **************************************************
+
+  /// Get filename from pathname. 
+  /// - If pathname ends in ".{suffix}", remove ".{suffix}.
+  inline void get_filename_remove_suffix
+  (const char * pathname, const char * suffix, std::string & filename)
+  {
+    // remove path from file name
+    std::string prefix0, suffix0;
+    split_string(pathname, '/', prefix0, suffix0);
+    if (suffix0 == "") 
+      { filename = pathname; }
+    else
+      { filename = suffix0; }
+
+    split_string(filename, '.', prefix0, suffix0);
+    if (suffix == suffix0) 
+      { filename = prefix0; }
+  }
+
+
+  // **************************************************
   /// @name QUERY STRING
   // **************************************************
 

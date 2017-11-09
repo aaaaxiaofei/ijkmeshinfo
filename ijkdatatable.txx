@@ -4,12 +4,12 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2008-2013 Rephael Wenger
+  Copyright (C) 2008-2017 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
   (LGPL) as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+  version 2.1 of the License, or any later version.
 
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,7 +38,7 @@ namespace IJKDATATABLE {
 // **************************************************
 
   /// Base class for data table.
-  template <class NTYPE> class DATA_TABLE_BASE {
+  template <typename NTYPE> class DATA_TABLE_BASE {
 
   public:
     typedef NTYPE NUMBER_TYPE;  ///< Number type.
@@ -59,7 +59,7 @@ namespace IJKDATATABLE {
   /// Column of data.
   /// Note that different columns within the same table may
   /// have different types.
-  template <class NTYPE, class DTYPE> class DATA_COLUMN {
+  template <typename NTYPE, typename DTYPE> class DATA_COLUMN {
 
   public:
     typedef NTYPE NUMBER_TYPE;  ///< Number type.
@@ -82,7 +82,7 @@ namespace IJKDATATABLE {
     // set functions
     void Set(const NTYPE irow, const DTYPE v) { data[irow] = v; };
     void SetAll(const DTYPE v);
-    template<class ITYPE>
+    template<typename ITYPE>
     void SetAtIntervals(const DTYPE v0, const ITYPE interval);
     void Increment(const NTYPE irow) { data[irow]++; };
     void Add(const NTYPE irow, const DTYPE v) { data[irow] += v; };
@@ -119,7 +119,7 @@ namespace IJKDATATABLE {
     typedef DTYPE DATA_TYPE;
   };
 
-  template <class NTYPE, class DTYPE> 
+  template <typename NTYPE, typename DTYPE> 
   void DATA_COLUMN<NTYPE,DTYPE>::
   Init(const string & label, const NTYPE num_rows)
   {
@@ -129,7 +129,7 @@ namespace IJKDATATABLE {
     if (num_rows > 0) { data = new DTYPE[num_rows]; };
   };
 
-  template <class NTYPE, class DTYPE> 
+  template <typename NTYPE, typename DTYPE> 
   void DATA_COLUMN<NTYPE,DTYPE>::FreeAll()
   {
     this->label = "";
@@ -139,7 +139,7 @@ namespace IJKDATATABLE {
   }
 
   /// Set all rows
-  template <class NTYPE, class DTYPE> 
+  template <typename NTYPE, typename DTYPE> 
   void DATA_COLUMN<NTYPE,DTYPE>::SetAll(const DTYPE v)
   {
     for (NTYPE irow = 0; irow < NumRows(); irow++) 
@@ -147,8 +147,8 @@ namespace IJKDATATABLE {
   }
 
   /// Set all rows at equally spaced intervals
-  template <class NTYPE, class DTYPE> 
-  template <class ITYPE>
+  template <typename NTYPE, typename DTYPE> 
+  template <typename ITYPE>
   void DATA_COLUMN<NTYPE,DTYPE>::SetAtIntervals
   (const DTYPE v0, const ITYPE interval)
   {
@@ -156,7 +156,7 @@ namespace IJKDATATABLE {
       { data[irow] = v0 + irow*interval; }
   }
 
-  template <class NTYPE, class DTYPE> 
+  template <typename NTYPE, typename DTYPE> 
   void DATA_COLUMN<NTYPE,DTYPE>::
   Add(const NTYPE irow0, const NTYPE irow1, const DTYPE v)
   {
@@ -164,7 +164,7 @@ namespace IJKDATATABLE {
       { Add(irow, v); };
   }
 
-  template <class NTYPE, class DTYPE> 
+  template <typename NTYPE, typename DTYPE> 
   void DATA_COLUMN<NTYPE,DTYPE>::SetNumRows(const NTYPE num_rows)
     // set number of rows
   {
@@ -175,7 +175,7 @@ namespace IJKDATATABLE {
   }
 
   /// Compute and return sum of all values in column.
-  template <class NTYPE, class DTYPE>
+  template <typename NTYPE, typename DTYPE>
   DTYPE DATA_COLUMN<NTYPE,DTYPE>::Sum() const
   {
     DTYPE sum = 0;
@@ -208,7 +208,7 @@ namespace IJKDATATABLE {
   // Return smallest i such that sum of all values in first i rows 
   //   is at least half the sum of all values in all rows.
   // Return 0 if number of rows is 0.
-  template <class NTYPE, class DTYPE>
+  template <typename NTYPE, typename DTYPE>
   NTYPE DATA_COLUMN<NTYPE,DTYPE>::MedianRow() const
   {
     return(kthRow(2));
@@ -216,7 +216,7 @@ namespace IJKDATATABLE {
 
   // Return smallest i such that sum of all values in first (i-1) rows
   //   is less than (kth_percentile/100) times the sum of all values.
-  template <class NTYPE, class DTYPE>
+  template <typename NTYPE, typename DTYPE>
   template <typename PERCENTILE>
   NTYPE DATA_COLUMN<NTYPE,DTYPE>::
   kthPercentileRow(const PERCENTILE kth_percentile) const
@@ -224,13 +224,15 @@ namespace IJKDATATABLE {
     return(kthRow(100.0/kth_percentile));
   }
 
+
 // **************************************************
 // Compute Bucket
 // **************************************************
 
   /// Return the bucket containing the input value.
-  template <class STYPE, class ITYPE, class NTYPE>
-  NTYPE compute_bucket(const STYPE value, const STYPE min_value,
+  template <typename STYPE0, typename STYPE1, 
+            typename ITYPE, typename NTYPE>
+  NTYPE compute_bucket(const STYPE0 value, const STYPE1 min_value,
                        const ITYPE interval, const NTYPE num_buckets)
   {
     NTYPE ibucket = NTYPE((value-min_value)/interval);
@@ -241,7 +243,7 @@ namespace IJKDATATABLE {
   }
 
   /// Return the number of buckets in the given range.
-  template <class NTYPE, class STYPE, class ITYPE>
+  template <typename NTYPE, typename STYPE, typename ITYPE>
   NTYPE compute_num_buckets(const STYPE min_value, const STYPE max_value,
 			    const ITYPE interval)
   {
@@ -258,7 +260,8 @@ namespace IJKDATATABLE {
 
   /// Check data columns
   /// Return true if columns have same number of rows.
-  template <class NTYPE0, class DTYPE0, class NTYPE1, class DTYPE1>
+  template <typename NTYPE0, typename DTYPE0, 
+            typename NTYPE1, typename DTYPE1>
   bool check_data_columns (const DATA_COLUMN<NTYPE0,DTYPE0> & col0,
 			   const DATA_COLUMN<NTYPE1,DTYPE1> & col1,
 			   IJK::ERROR & error)

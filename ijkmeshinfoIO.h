@@ -265,8 +265,21 @@ namespace IJKMESHINFO {
   // OUTPUT EDGE LENGTH ROUTINES
   // **************************************************
 
+  /// Output minimum/maximum polygon edge lengths.
+  void output_min_max_polygon_edge_lengths
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal,
+   const int num_poly_edges);
+
   /// Output minimum/maximum tetrahedra edge lengths.
   void output_min_max_tetrahedra_edge_lengths
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output minimum/maximum simplices edge lengths.
+  void output_min_max_simplices_edge_lengths
   (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal);

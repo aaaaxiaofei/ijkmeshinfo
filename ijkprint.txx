@@ -230,6 +230,20 @@ namespace IJK {
   }
 
 
+  /// Print hexahedron vertices, preceded and followed by a string.
+  template <typename VTYPE>
+  void print_hexahedron_vertices
+  (std::ostream & out, const char * s0, const VTYPE hexahedron_vert[],
+   const char * s1)
+  {
+    const int NUM_VERT_PER_HEXAHEDRON(8);
+
+    out << s0;
+    print_list(out, hexahedron_vert, NUM_VERT_PER_HEXAHEDRON);
+    out << s1;
+  }
+
+
   inline void print_time(std::ostream & out, const char * s, 
                          const clock_t & t_start, const clock_t & t_end)
   {
