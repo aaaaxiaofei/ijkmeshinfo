@@ -1286,7 +1286,9 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-facet_angle_le <A>] [-facet_angle_ge <A>]" << endl;
   cerr << "  [-list_dup] [-internal]" << endl;
   cerr << "  [-selfI]" << endl;
-  cerr << "  [-out_values] [-out_min_angle] [-out_max_angle] [-plot_angles]"
+  cerr << "  [-out_values] [-out_min_angle] [-out_max_angle]"
+       << endl;
+  cerr << "  [-plot_angles] [-plot_edge_lengths] [-plot_jacobian]"
        << endl;
   cerr << "  [-report_deep] [-for_each_type]" << endl;
   cerr << "  [-max_out <N>] [-terse] [-help]" << endl;
@@ -1381,6 +1383,13 @@ void IJKMESHINFO::help_msg()
   cerr << "  -plot_angles:       Create gnuplot (.gplt) files of min and max"
        << endl
        << "                          triangle angles." << endl;
+  cerr << "  -plot_edge_lengths: Create gnuplot (.gplt) files of min and max"
+       << endl
+       << "                          polytope edge lengths." << endl;
+  cerr << "  -plot_jacobian:     Create gnuplot (.gplt) files of min and max"
+       << endl
+       << "                          hexahedra Jacobian determinants." 
+       << endl;
   cerr << "  -report_deep:       Report only boundary facets at least distance 1"
        << endl
        << "                          from bounding box." << endl;
