@@ -1293,6 +1293,41 @@ namespace IJK {
 
 
   // **************************************************
+  /// @name GET HEXAHEDRON FACET DIAGONAL
+  // **************************************************
+
+  ///@{
+
+  /// Get diagonal of hexahedron facet jfacet.
+  /// @param flag_tri Indicate which diagonal.
+  ///    - If true, return diagonal containing vertex 0 or 7.
+  ///    - If false, return diagonal not containing vertex 0 or 7.
+  /// @param[out] diagonal_endpoint[] Endpoints of diagonal.
+  ///   diagonal_endpoint[0] <= diagonal_endpoint[1].
+  template <typename VTYPE, typename FTYPE, typename ETYPE>
+  void get_hexahedron_facet_diagonal
+  (const VTYPE hex_vert[], const FTYPE jfacet, const bool flag_tri,
+   ETYPE diagonal_endpoint[2])
+  {
+    const ETYPE facet_diagA[] = { 0, 6, 0, 5, 0, 3, 1, 7, 2, 7, 4, 7 };
+    const ETYPE facet_diagB[] = { 2, 4, 1, 4, 1, 2, 3, 5, 3, 6, 5, 6 };
+
+    if (flag_tri) {
+      diagonal_endpoint[0] = hex_vert[facet_diagB[2*jfacet]];
+      diagonal_endpoint[1] = hex_vert[facet_diagB[2*jfacet+1]];
+    }
+    else {
+      diagonal_endpoint[0] = hex_vert[facet_diagA[2*jfacet]];
+      diagonal_endpoint[1] = hex_vert[facet_diagA[2*jfacet+1]];
+    }
+
+    if (diagonal_endpoint[0] > diagonal_endpoint[1])
+      { std::swap(diagonal_endpoint[0], diagonal_endpoint[1]); }
+  }
+
+  ///@}
+
+  // **************************************************
   /// @name SORT SIMPLEX VERTICES AND SIMPLICES
   // **************************************************
 

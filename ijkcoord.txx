@@ -1956,6 +1956,372 @@ namespace IJK {
     determinant_3x3(v1, v2, v3, result);
   }
 
+
+  /// Compute determinant of the Jacobian matrix of a hexahedron
+  ///   at the hexahedron center.
+  /// @param orientation Orientation of hexahedra. +1 or -1.
+  /// @param cube Cube with facet information.
+  /// @pre     cube.Dimension() = 3. 
+  template <typename ORIENT_TYPE, typename VTYPE, 
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE>
+  void compute_hexahedron_center_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE & Jacobian_determinant)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    const DTYPE DIM3(3);
+    CTYPE Jacobian[DIM3][DIM3];
+    CTYPE temp_coord[DIM3];
+
+    Jacobian_determinant = 0;
+
+    for (DTYPE d = 0; d < DIM3; d++) {
+
+      IJK::set_coord_3D(0, Jacobian[d]);
+
+      for (NTYPE j = 0; j < cube.NumFacetVertices(); j++) {
+        const NTYPE i0 = cube.FacetVertex(d, j);
+        const NTYPE i1 = cube.VertexNeighbor(i0, d);
+        const VTYPE iv0 = hex_vert[i0];
+        const VTYPE iv1 = hex_vert[i1];
+        const CTYPE * v0coord = vertex_coord + iv0*DIM3;
+        const CTYPE * v1coord = vertex_coord + iv1*DIM3;
+
+        IJK::subtract_coord_3D(v1coord, v0coord, temp_coord);
+        IJK::add_coord_3D(temp_coord, Jacobian[d], Jacobian[d]);
+      }
+
+      // Reduce by factor of 4.
+      IJK::divide_coord(DIM3, 4, Jacobian[d], Jacobian[d]);
+
+      IJK::determinant_3x3
+        (Jacobian[0], Jacobian[1], Jacobian[2], Jacobian_determinant);
+
+      if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+    }
+  
+  }
+
+
+  /// Compute Jacobian matrix determinant of a hexahedron at a given corner.
+  /// @pre cube.Dimension() = 3. 
+  /// @param icorner0 Cube corner index.  Possible values are 0,1,...,7.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename CORNER_TYPE, typename DET_TYPE>
+  void compute_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const CORNER_TYPE icorner0,
+   DET_TYPE & Jacobian_determinant)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    const DTYPE DIM3(3);
+
+    // Multiple det at cube vertex i by orient_factor[i] 
+    //   to get correct sign of Jacobian determinant.
+    const static ORIENT_TYPE orient_factor[] = { 1, -1, -1, 1, -1, 1, 1, -1 };
+
+    const NTYPE icorner1 = cube.VertexNeighbor(icorner0, 0);
+    const NTYPE icorner2 = cube.VertexNeighbor(icorner0, 1);
+    const NTYPE icorner3 = cube.VertexNeighbor(icorner0, 2);
+    const VTYPE iv0 = hex_vert[icorner0];
+    const VTYPE iv1 = hex_vert[icorner1];
+    const VTYPE iv2 = hex_vert[icorner2];
+    const VTYPE iv3 = hex_vert[icorner3];
+    const CTYPE * v0coord = vertex_coord + iv0*DIM3;
+    const CTYPE * v1coord = vertex_coord + iv1*DIM3;
+    const CTYPE * v2coord = vertex_coord + iv2*DIM3;
+    const CTYPE * v3coord = vertex_coord + iv3*DIM3;
+
+    IJK::determinant_point_3D(v0coord, v1coord, v2coord, v3coord, 
+                              Jacobian_determinant);
+    Jacobian_determinant = Jacobian_determinant * orient_factor[icorner0];
+
+    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+  }
+
+
+  /// Compute Jacobian matrix determinant of a hexahedron at a given corner.
+  /// - Version with C++ STL vector format for vertex_coord.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename CORNER_TYPE, typename DET_TYPE>
+  void compute_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   const CORNER_TYPE icorner0,
+   DET_TYPE & Jacobian_determinant)
+  {
+    const CTYPE * vcoord = IJK::vector2pointer(vertex_coord);
+
+    compute_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vcoord, cube, icorner0, Jacobian_determinant);
+  }
+
+
+  /// Compute Jacobian matrix determinant of a hexahedron at a given corner.
+  /// - Version with C++ STL vector format for vertex_coord[].
+  /// - Version with C++ STL vector hex_vert[] containing 
+  ///     an array of vertices of multiple hexahedra.
+  template <typename VTYPE, typename NTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename CORNER_TYPE, typename DET_TYPE>
+  void compute_hexahedron_Jacobian_determinant_3D
+  (const std::vector<VTYPE> & hex_vert,
+   const NTYPE ihex,
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   const CORNER_TYPE icorner0,
+   DET_TYPE & Jacobian_determinant)
+  {
+    const NTYPE NUM_VERT_PER_HEX(8);
+    const CTYPE * vcoord = IJK::vector2pointer(vertex_coord);
+    const VTYPE * hex_i_vert = &(hex_vert[ihex*NUM_VERT_PER_HEX]);
+
+    compute_hexahedron_Jacobian_determinant_3D
+      (hex_i_vert, orientation, vcoord, cube, icorner0, Jacobian_determinant);
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// @pre cube.Dimension() = 3. 
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant)
+  {
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    min_Jacobian_determinant = 0;
+    max_Jacobian_determinant = 0;
+
+    compute_hexahedron_center_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube,
+       min_Jacobian_determinant);
+    max_Jacobian_determinant = min_Jacobian_determinant;
+
+    for (NTYPE i0 = 0; i0 < cube.NumVertices(); i0++) {
+      DET_TYPE0 det;
+
+      compute_hexahedron_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, det);
+
+      if (det < min_Jacobian_determinant) { min_Jacobian_determinant = det; }
+      if (det > max_Jacobian_determinant) { max_Jacobian_determinant = det; }
+    }
+  }
+
+
+  /// Compute min/max of the eight Jacobian matrix determinants 
+  ///   at the eight vertices of a hexahedron.
+  /// @pre cube.Dimension() = 3. 
+  template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1>
+  void compute_min_max_hex_vert_Jacobian_determinant_3D
+  (const VTYPE0 hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   VTYPE1 & vert_with_min_Jacobian_determinant,
+   VTYPE2 & vert_with_max_Jacobian_determinant)
+  {
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    min_Jacobian_determinant = 0;
+    max_Jacobian_determinant = 0;
+
+    compute_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, 0, 
+       min_Jacobian_determinant);
+    max_Jacobian_determinant = min_Jacobian_determinant;
+    vert_with_min_Jacobian_determinant = hex_vert[0];
+    vert_with_max_Jacobian_determinant = hex_vert[0];
+
+    for (NTYPE i0 = 1; i0 < cube.NumVertices(); i0++) {
+      DET_TYPE0 det;
+
+      compute_hexahedron_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, det);
+
+      if (det < min_Jacobian_determinant) { 
+        min_Jacobian_determinant = det; 
+        vert_with_min_Jacobian_determinant = hex_vert[i0];
+      }
+
+      if (det > max_Jacobian_determinant) { 
+        max_Jacobian_determinant = det; 
+        vert_with_max_Jacobian_determinant = hex_vert[i0];
+      }
+    }
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// - Version which returns all nine determinants.
+  /// @pre cube.Dimension() = 3. 
+  /// @param[out] Jacobian_determinant[] 
+  ///   - If i < 8, Jacobian_determinant[i] is the Jacobian determinant
+  ///     at corner i.
+  ///   - Jacobian_determinant[8] is the Jacobian determinant
+  ///    at the hexahedron center.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1, typename DET_TYPE2>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   DET_TYPE2 Jacobian_determinant[9])
+  {
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    min_Jacobian_determinant = 0;
+    max_Jacobian_determinant = 0;
+
+    compute_hexahedron_center_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube,
+       Jacobian_determinant[8]);
+    min_Jacobian_determinant = Jacobian_determinant[8];
+    max_Jacobian_determinant = min_Jacobian_determinant;
+
+    for (NTYPE i0 = 0; i0 < cube.NumVertices(); i0++) {
+      DET_TYPE0 det;
+
+      compute_hexahedron_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, det);
+
+      Jacobian_determinant[i0] = det;
+      if (det < min_Jacobian_determinant) { min_Jacobian_determinant = det; }
+      if (det > max_Jacobian_determinant) { max_Jacobian_determinant = det; }
+    }
+
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// - Version with C++ STL vector format for vertex_coord.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant)
+  {
+    const CTYPE * vcoord = IJK::vector2pointer(vertex_coord);
+
+    compute_min_max_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vcoord, cube,
+       min_Jacobian_determinant, max_Jacobian_determinant);
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// - Version which returns all nine determinants.
+  /// - Version with C++ STL vector format for vertex_coord.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1, typename DET_TYPE2>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   DET_TYPE2 Jacobian_determinant[9])
+  {
+    const CTYPE * vcoord = IJK::vector2pointer(vertex_coord);
+
+    compute_min_max_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vcoord, cube,
+       min_Jacobian_determinant, max_Jacobian_determinant,
+       Jacobian_determinant);
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// - Version with C++ STL vector format for vertex_coord[].
+  /// - Version with C++ STL vector hex_vert[] containing 
+  ///     an array of vertices of multiple hexahedra.
+  template <typename VTYPE, typename NTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const std::vector<VTYPE> & hex_vert,
+   const NTYPE ihex,
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant)
+  {
+    const NTYPE NUM_VERT_PER_HEX(8);
+    const VTYPE * hex_i_vert = &(hex_vert[ihex*NUM_VERT_PER_HEX]);
+
+    compute_min_max_hexahedron_Jacobian_determinant_3D
+      (hex_i_vert, orientation, vertex_coord, cube,
+       min_Jacobian_determinant, max_Jacobian_determinant);
+  }
+
+
+  /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
+  /// - Version which returns all nine determinants.
+  /// - Version with C++ STL vector format for vertex_coord.
+  /// - Version with C++ STL vector hex_vert[] containing 
+  ///     an array of vertices of multiple hexahedra.
+  template <typename VTYPE, typename NTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1, typename DET_TYPE2>
+  void compute_min_max_hexahedron_Jacobian_determinant_3D
+  (const std::vector<VTYPE> & hex_vert,
+   const NTYPE ihex,
+   const ORIENT_TYPE orientation,
+   const std::vector<CTYPE> & vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   DET_TYPE2 Jacobian_determinant[9])
+  {
+    const NTYPE NUM_VERT_PER_HEX(8);
+    const VTYPE * hex_i_vert = &(hex_vert[ihex*NUM_VERT_PER_HEX]);
+
+    compute_min_max_hexahedron_Jacobian_determinant_3D
+      (hex_i_vert, orientation, vertex_coord, cube,
+       min_Jacobian_determinant, max_Jacobian_determinant,
+       Jacobian_determinant);
+  }
+
   ///@}
 
 

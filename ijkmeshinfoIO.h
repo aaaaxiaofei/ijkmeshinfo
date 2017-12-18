@@ -74,10 +74,10 @@ namespace IJKMESHINFO {
     bool flag_output_max_edge_length;
 
     /// If true, output min of the Jacobian determinants.
-    bool flag_output_min_Jacobian_determinants;
+    bool flag_output_min_Jacobian_determinant;
 
     /// If true, output max of the Jacobian determinants.
-    bool flag_output_max_Jacobian_determinants;
+    bool flag_output_max_Jacobian_determinant;
 
     /// If true, output all polytopes with minimum and maximum values.
     bool flag_output_all_min_max;
@@ -361,6 +361,13 @@ namespace IJKMESHINFO {
   /// Output hexahedra with max Jacobian determinants.
   void output_hexahedra_with_max_Jacobian_determinants
   (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal);
+
+  /// Output hex mesh vertices with min Jacobian determinants.
+  void output_hex_mesh_vertices_with_min_Jacobian_determinants
+  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
    const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal);
 

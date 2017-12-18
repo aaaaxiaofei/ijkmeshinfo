@@ -60,7 +60,7 @@ void IJKMESHINFO::compute_min_max_polygon_angles
   if (num_poly_vert == 0) {
     // Note: Poly with max angle has min_cos.
     //       Poly with min angle has max_cos.
-    compute_min_max_values
+    compute_min_max_plist_values
       (mesh_data, polymesh, vertex_coord, flag_internal, 
        1, -1, min_cos, max_cos, poly_with_max_angle, poly_with_min_angle,
        compute_min_max_cos_polygon_angles);
@@ -68,7 +68,7 @@ void IJKMESHINFO::compute_min_max_polygon_angles
   else {
     // Note: Poly with max angle has min_cos.
     //       Poly with min angle has max_cos.
-    compute_min_max_values_select_poly_by_numv
+    compute_min_max_plist_values_select_poly_by_numv
       (mesh_data, polymesh, vertex_coord, flag_internal, 1, -1, num_poly_vert,
        min_cos, max_cos, poly_with_max_angle, poly_with_min_angle,
        compute_min_max_cos_polygon_angles);
@@ -547,7 +547,7 @@ void IJKMESHINFO::compute_min_max_polygon_edge_lengths
  COORD_TYPE & min_length, COORD_TYPE & max_length,
  int & poly_with_min_edge_length, int & poly_with_max_edge_length)
 {
-  compute_min_max_values
+  compute_min_max_plist_values
     (mesh_data, polymesh, vertex_coord, flag_internal,
      0, 0, min_length, max_length,
      poly_with_min_edge_length, poly_with_max_edge_length,
@@ -569,7 +569,7 @@ void IJKMESHINFO::compute_min_max_polygon_edge_lengths_select_poly_by_numv
        poly_with_min_edge_length, poly_with_max_edge_length);
   }
   else {
-    compute_min_max_values_select_poly_by_numv
+    compute_min_max_plist_values_select_poly_by_numv
       (mesh_data, polymesh, vertex_coord, flag_internal,
        0, 0, num_poly_vert, min_length, max_length,
        poly_with_min_edge_length, poly_with_max_edge_length,
@@ -651,7 +651,7 @@ void IJKMESHINFO::compute_min_max_tetrahedra_edge_lengths
 {
   const int dimension = mesh_data.dimension;
 
-  compute_min_max_values
+  compute_min_max_plist_values
     (mesh_data, polymesh, vertex_coord, flag_internal,
      0, 0, min_length, max_length,
      poly_with_min_edge_length, poly_with_max_edge_length,
@@ -717,7 +717,7 @@ void IJKMESHINFO::compute_min_max_simplices_edge_lengths
  COORD_TYPE & min_length, COORD_TYPE & max_length,
  int & poly_with_min_edge_length, int & poly_with_max_edge_length)
 {
-  compute_min_max_values
+  compute_min_max_plist_values
     (mesh_data, polymesh, vertex_coord, flag_internal,
      0, 0, min_length, max_length,
      poly_with_min_edge_length, poly_with_max_edge_length,
@@ -782,7 +782,7 @@ void IJKMESHINFO::compute_min_max_hexahedra_edge_lengths
  COORD_TYPE & min_length, COORD_TYPE & max_length,
  int & poly_with_min_edge_length, int & poly_with_max_edge_length)
 {
-  compute_min_max_values
+  compute_min_max_plist_values
     (mesh_data, polymesh, vertex_coord, flag_internal,
      0, 0, min_length, max_length,
      poly_with_min_edge_length, poly_with_max_edge_length,
@@ -855,16 +855,17 @@ void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_determinants
  int & poly_with_min_Jacobian_determinant, 
  int & poly_with_max_Jacobian_determinant)
 {
- compute_min_max_values
+ compute_min_max_plist_values
     (mesh_data, polymesh, vertex_coord, flag_internal,
      0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
      poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
-     compute_min_max_hexahedron_Jacobian_determinant);
+     compute_min_max_hexahedron_Jacobian_determinants);
 }
+
 
 // Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
 // @pre dimension = 3. 
-void IJKMESHINFO::compute_min_max_hexahedron_Jacobian_determinant
+void IJKMESHINFO::compute_min_max_hexahedron_Jacobian_determinants
 (const MESH_DATA & mesh_data,
  const VERTEX_INDEX hex_vert[], const int num_vert,
  const COORD_TYPE * vertex_coord,
@@ -872,103 +873,61 @@ void IJKMESHINFO::compute_min_max_hexahedron_Jacobian_determinant
  COORD_TYPE & max_Jacobian_determinant,
  int & num_Jacobian_determinants)
 {
-  const int dimension = mesh_data.dimension;
   const static CUBE_TYPE cube(DIM3);
 
-  // Multiple det at cube vertex i by orient_factor[i] 
-  //   to get correct sign of Jacobian determinant.
-  const static int orient_factor[] = { 1, -1, -1, 1, -1, 1, 1, -1 };
-
-  num_Jacobian_determinants = 0;
-  min_Jacobian_determinant = 0;
-  max_Jacobian_determinant = 0;
-
-  if (dimension != DIM3) {
-    IJK::PROCEDURE_ERROR error
-      ("compute_min_max_hexahedron_Jacobian_determinant");
-    error.AddMessage("Programming error.  Dimension must be 3.");
-    throw error;
-  }
-
-  compute_hexahedron_center_Jacobian_determinant
-    (dimension, mesh_data.orientation, hex_vert, num_vert, 
-     vertex_coord, min_Jacobian_determinant);
-  max_Jacobian_determinant = min_Jacobian_determinant;
-
-  for (int i0 = 0; i0 < cube.NumVertices(); i0++) {
-    const int i1 = cube.VertexNeighbor(i0, 0);
-    const int i2 = cube.VertexNeighbor(i0, 1);
-    const int i3 = cube.VertexNeighbor(i0, 2);
-    const VERTEX_INDEX iv0 = hex_vert[i0];
-    const VERTEX_INDEX iv1 = hex_vert[i1];
-    const VERTEX_INDEX iv2 = hex_vert[i2];
-    const VERTEX_INDEX iv3 = hex_vert[i3];
-    const COORD_TYPE * v0coord = vertex_coord + iv0*DIM3;
-    const COORD_TYPE * v1coord = vertex_coord + iv1*DIM3;
-    const COORD_TYPE * v2coord = vertex_coord + iv2*DIM3;
-    const COORD_TYPE * v3coord = vertex_coord + iv3*DIM3;
-
-    COORD_TYPE det;
-    IJK::determinant_point_3D(v0coord, v1coord, v2coord, v3coord, det);
-    det = det * orient_factor[i0];
-
-    if (mesh_data.orientation < 0) { det = -det; }
-
-    if (det < min_Jacobian_determinant) { min_Jacobian_determinant = det; }
-    if (det > max_Jacobian_determinant) { max_Jacobian_determinant = det; }
-  }
+  IJK::compute_min_max_hexahedron_Jacobian_determinant_3D
+    (hex_vert, mesh_data.orientation, vertex_coord, cube,
+     min_Jacobian_determinant, max_Jacobian_determinant);
 
   num_Jacobian_determinants = 9;
 }
 
 
-// Compute determinant of the Jacobian matrix of a hexahedron
-//   at the hexahedron center.
+// Compute min/max Jacobian matrix determinants of hexahedra.
+// - Version with input argument mesh_data.
+// - Version which returns vertices with min/max Jacobian determinants.
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
+ int & poly_with_min_Jacobian_determinant, 
+ int & poly_with_max_Jacobian_determinant,
+ int & vert_with_min_Jacobian_determinant, 
+ int & vert_with_max_Jacobian_determinant)
+{
+ compute_min_max_plist_values_data
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
+     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
+     vert_with_min_Jacobian_determinant, vert_with_max_Jacobian_determinant,
+     compute_min_max_hex_vert_Jacobian_determinants);
+}
+
+
+// Compute min/max of the eight Jacobian matrix determinants 
+//   at the eight vertices of a hexahedron.
 // @pre dimension = 3. 
-void IJKMESHINFO::compute_hexahedron_center_Jacobian_determinant
-(const int dimension, const int orientation,
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_determinants
+(const MESH_DATA & mesh_data,
  const VERTEX_INDEX hex_vert[], const int num_vert,
  const COORD_TYPE * vertex_coord,
- COORD_TYPE & Jacobian_determinant)
+ COORD_TYPE & min_Jacobian_determinant,
+ COORD_TYPE & max_Jacobian_determinant,
+ VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+ VERTEX_INDEX & vert_with_max_Jacobian_determinant,
+ int & num_Jacobian_determinants)
 {
   const static CUBE_TYPE cube(DIM3);
-  COORD_TYPE Jacobian[DIM3][DIM3];
-  COORD_TYPE temp_coord[DIM3];
 
-  Jacobian_determinant = 0;
+  IJK::compute_min_max_hex_vert_Jacobian_determinant_3D
+    (hex_vert, mesh_data.orientation, vertex_coord, cube,
+     min_Jacobian_determinant, max_Jacobian_determinant,
+     vert_with_min_Jacobian_determinant, 
+     vert_with_max_Jacobian_determinant);
 
-  if (dimension != DIM3) {
-    IJK::PROCEDURE_ERROR error
-      ("compute_hexahedron_center_Jacobian_determinant");
-    error.AddMessage("Programming error.  Dimension must be 3.");
-    throw error;
-  }
-
-  for (int d = 0; d < DIM3; d++) {
-
-    IJK::set_coord_3D(0, Jacobian[d]);
-
-    for (int j = 0; j < cube.NumFacetVertices(); j++) {
-      const int i0 = cube.FacetVertex(d, j);
-      const int i1 = cube.VertexNeighbor(i0, d);
-      const VERTEX_INDEX iv0 = hex_vert[i0];
-      const VERTEX_INDEX iv1 = hex_vert[i1];
-      const COORD_TYPE * v0coord = vertex_coord + iv0*DIM3;
-      const COORD_TYPE * v1coord = vertex_coord + iv1*DIM3;
-
-      IJK::subtract_coord_3D(v1coord, v0coord, temp_coord);
-      IJK::add_coord_3D(temp_coord, Jacobian[d], Jacobian[d]);
-    }
-
-    // Reduce by factor of 4.
-    IJK::divide_coord(DIM3, 4, Jacobian[d], Jacobian[d]);
-
-    IJK::determinant_3x3
-      (Jacobian[0], Jacobian[1], Jacobian[2], Jacobian_determinant);
-
-    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
-  }
-
-  
+  num_Jacobian_determinants = 9;
 }
+
+
 

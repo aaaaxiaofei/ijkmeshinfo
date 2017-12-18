@@ -295,6 +295,7 @@ typedef enum
    LIST_DUP_PARAM, INTERNAL_PARAM,
    REPORT_DEEP_PARAM, OUT_VALUES_PARAM,
    OUT_MIN_ANGLE_PARAM, OUT_MAX_ANGLE_PARAM, 
+   OUT_MIN_JACOBIAN_DET_PARAM, OUT_MAX_JACOBIAN_DET_PARAM,
    PLOT_ANGLES_PARAM, PLOT_EDGE_LENGTHS_PARAM,
    PLOT_JACOBIAN_PARAM,
    FOR_EACH_TYPE_PARAM, 
@@ -313,6 +314,7 @@ const char * parameter_string[] =
    "-facet_angle_le", "-facet_angle_ge",
    "-list_dup", "-internal",
    "-report_deep", "-out_values", "-out_min_angle", "-out_max_angle",
+   "-out_min_jdet", "-out_max_jdet",
    "-plot_angles", "-plot_edge_lengths", "-plot_jacobian",
    "-for_each_type",
    "-max_out", "-terse", "-help", "-unknown"};
@@ -338,6 +340,8 @@ int main(int argc, char **argv)
 
     check_input();
 
+    VERTEX_POLY_INCIDENCE_TYPE vertex_info(polymesh);
+
     sort_poly();
     identify_duplicates();
 
@@ -348,6 +352,12 @@ int main(int argc, char **argv)
       output_min_max_angle
         (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
     }
+    else if (io_info.flag_output_min_Jacobian_determinant ||
+             io_info.flag_output_max_Jacobian_determinant) {
+      output_min_max_Jacobian_determinants
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
+    }
+
     if (vertex_info_flag) 
       { output_vertex_info(mesh_data.dimension, vertex_index); };
     if (poly_info_flag) { 
@@ -455,8 +465,17 @@ int main(int argc, char **argv)
       }
     }
 
-    if (vlist_flag) 
-      { output_vertex_list(); }
+    if (vlist_flag) {
+      if (io_info.flag_output_min_Jacobian_determinant) {
+        output_hex_mesh_vertices_with_min_Jacobian_determinants
+          (mesh_data, polymesh, vertex_info, vertex_coord,
+           io_info, flag_internal);
+      }
+      else {
+        // Output all vertices.
+        output_vertex_list();
+      }
+    }
 
     if (flag_polyfile) {
       if (contains_vertex_flag)
@@ -822,8 +841,8 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
       (mesh_data, polymesh, vertex_coord, io_info, true);
   }
 
-  io_info.flag_output_min_Jacobian_determinants = true;
-  io_info.flag_output_max_Jacobian_determinants = true;
+  io_info.flag_output_min_Jacobian_determinant = true;
+  io_info.flag_output_max_Jacobian_determinant = true;
   COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
   output_min_max_Jacobian_determinants
     (mesh_data, polymesh, vertex_coord, io_info, false,
@@ -3150,7 +3169,7 @@ void compute_hex_Jacobian_determinants
     if (polymesh.poly_data[ipoly].IsDegenerate())
       { continue; }
 
-    compute_min_max_hexahedron_Jacobian_determinant
+    compute_min_max_hexahedron_Jacobian_determinants
       (mesh_data, polymesh.VertexList(ipoly),
        polymesh.NumPolyVert(ipoly), vertex_coord,
        min_Jacobian, max_Jacobian, num_Jacobian_determinants);
@@ -4030,6 +4049,16 @@ void parse_command_line(int argc, char **argv)
 
       case OUT_MAX_ANGLE_PARAM:
         io_info.flag_output_max_angle = true;
+        io_info.flag_general_info = false;
+        break;
+
+      case OUT_MIN_JACOBIAN_DET_PARAM:
+        io_info.flag_output_min_Jacobian_determinant = true;
+        io_info.flag_general_info = false;
+        break;
+
+      case OUT_MAX_JACOBIAN_DET_PARAM:
+        io_info.flag_output_max_Jacobian_determinant = true;
         io_info.flag_general_info = false;
         break;
 

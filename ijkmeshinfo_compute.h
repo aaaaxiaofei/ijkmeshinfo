@@ -305,7 +305,7 @@ namespace IJKMESHINFO {
   /// - Eight Jacobian matrices at the eight hexahedron vertices and 
   ///     one Jacobian matrix at the hexahedron center.
   /// @pre dimension = 3. 
-  void compute_min_max_hexahedron_Jacobian_determinant
+  void compute_min_max_hexahedron_Jacobian_determinants
   (const MESH_DATA & mesh_data, 
    const VERTEX_INDEX hex_vert[], const int num_vert,
    const COORD_TYPE * vertex_coord,
@@ -313,14 +313,31 @@ namespace IJKMESHINFO {
    COORD_TYPE & max_Jacobian_determinant,
    int & num_Jacobian_determinants);
 
-  /// Compute determinant of the Jacobian matrix of a hexahedron
-  ///   at the hexahedron center.
+  /// Compute min/max Jacobian matrix determinants of hexahedra.
+  /// - Version with input argument mesh_data.
+  /// - Version which returns vertices with min/max Jacobian determinants.
+  void compute_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant,
+   int & vert_with_min_Jacobian_determinant, 
+   int & vert_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the eight Jacobian matrix determinants 
+  ///   at the eight vertices of a hexahedron.
   /// @pre dimension = 3. 
-  /// @param orientation Hexahedron orientation. +1 or -1.
-  void compute_hexahedron_center_Jacobian_determinant
-  (const int dimension, const int orientation,
+  void compute_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
    const VERTEX_INDEX hex_vert[], const int num_vert,
-   const COORD_TYPE * vertex_coord, COORD_TYPE & Jacobian_determinant);
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant,
+   int & num_Jacobian_determinants);
 
 }
 
