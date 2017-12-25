@@ -1771,6 +1771,136 @@ namespace IJK {
 
 
   // **************************************************
+  /// @name 3D vector operations
+  // **************************************************
+
+  ///@{
+
+  /// Compute 3D unit vector.
+  template <typename CTYPE0, typename MTYPE0, 
+            typename CTYPE1, typename CTYPE2, typename MTYPE1>
+  void compute_unit_vector_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   const MTYPE0 max_small_magnitude, CTYPE2 coord2[],
+   MTYPE1 & magnitude, bool & flag_zero)
+  {
+    const int DIM3 = 3;
+    compute_unit_vector(DIM3, coord0, coord1, max_small_magnitude, coord2,
+                        magnitude, flag_zero);
+  }
+
+  ///@}
+
+
+  // **************************************************
+  /// @name 3D distances
+  // **************************************************
+
+  ///@{
+
+  /// Compute distance between two 3D points.
+  template <typename CTYPE0, typename CTYPE1, typename DIST_TYPE>
+  void compute_distance_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   DIST_TYPE & distance)
+  {
+    const int DIM3 = 3;
+    compute_distance(DIM3, coord0, coord1, distance);
+  }
+
+  /*! 
+   *  Compute signed (L2) distance from coord0[] to hyperplane through coord1[].
+   *  @tparam DIST_TYPE Distance type.  DIST_TYPE should be a signed type.
+   *  @param coord0[] Compute distance from coord0[].
+   *  @param coord1[] Plane passes through coord1[].
+   *  @param orth_dir[] Direction orthogonal to hyperplane.
+   *  @param[out] distance Signed distance to hyperplane.
+   *    - distance = inner product of (coord0[]-coord1[]) and orth_dir[].
+   *  @pre orth_dir[] is a unit vector.
+   */
+  template <typename CTYPE0, typename CTYPE1, 
+            typename VTYPE, typename DIST_TYPE>
+  void compute_signed_distance_to_plane_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   const VTYPE orth_dir[], DIST_TYPE & distance)
+  {
+    const int DIM3 = 3;
+    compute_signed_distance_to_hyperplane
+      (DIM3, coord0, coord1, orth_dir, distance);
+  }
+
+  /*!
+   *  Compute (unsigned, L2) distance from coord0[] to plane through coord1[].
+   *  @param coord0[] Compute distance from coord0[].
+   *  @param coord1[] Plane passes through coord1[].
+   *  @param orth_dir[] Direction orthogonal to hyperplane.
+   *  @param[out] distance Distance to hyperplane.
+   *     - distance = the absolute value of inner product of 
+   *                 (coord0[]-coord1[]) and orth_dir[].
+   *  @pre orth_dir[] is a unit vector.
+   */
+  template <typename CTYPE0, typename CTYPE1, 
+            typename VTYPE, typename DIST_TYPE>
+  void compute_distance_to_plane_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   const VTYPE orth_dir[], DIST_TYPE & distance)
+  {
+    const int DIM3 = 3;
+    compute_distance_to_hyperplane
+      (DIM3, coord0, coord1, orth_dir, distance);
+  }
+
+  /*!
+   *  Compute (L2) distance squared from coord0[] to line through coord1[].
+   *  @param coord0[] Compute distance from coord0[].
+   *  @param coord1[] Line passes through coord1[].
+   *  @param dir[] Line direction.
+   *  @param[out] distance_squared
+   *    Distance squared from coord0[] to line through coord1[].
+   *    - distance_squared = Magnitude squared of w where w is the component
+   *       of (coord0[]-coord1[]) orthogonal to dir[].
+   *    - w = (coord0[]-coord1[]) - x*dir[] where x is the inner product
+   *       of (coord0[]-coord1[]) and dir[].
+   *  @pre dir[] is a unit vector.
+   */
+  template <typename CTYPE0, typename CTYPE1, 
+            typename VTYPE, typename DIST_TYPE>
+  void compute_distance_squared_to_line_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   const VTYPE dir[], DIST_TYPE & distance_squared)
+  {
+    const int DIM3 = 3;
+    compute_distance_squared_to_line
+      (DIM3, coord0, coord1, dir, distance_squared);
+  }
+
+  /*!
+   *  Compute (unsigned, L2) distance from coord0[] to line through coord1[].
+   *  @param dimension Coordinate dimension (= number of coordinates.)
+   *  @param coord0[] Compute distance from coord0[].
+   *  @param coord1[] Line passes through coord1[].
+   *  @param dir[] Line direction.
+   *  @param[out] distance Distance from coord0[] to line through coord1[].
+   *    - distance = Magnitude of w where w is the component
+   *       of (coord0[]-coord1[]) orthogonal to dir[].
+   *    - w = (coord0[]-coord1[]) - x*dir[] where x is the inner product
+   *       of (coord0[]-coord1[]) and dir[].
+   *  @pre dir[] is a unit vector.
+   */
+  template <typename CTYPE0, typename CTYPE1, 
+            typename VTYPE, typename DIST_TYPE>
+  void compute_distance_to_line_3D
+  (const CTYPE0 coord0[], const CTYPE1 coord1[],
+   const VTYPE dir[], DIST_TYPE & distance)
+  {
+    const int DIM3 = 3;
+    compute_distance_to_line(DIM3, coord0, coord1, dir, distance);
+  }
+
+  ///@}
+
+
+  // **************************************************
   /// @name 2D and 3D Matrix operations
   // **************************************************
 
@@ -1957,11 +2087,21 @@ namespace IJK {
   }
 
 
+  //@}
+
+
+  // **************************************************
+  /// @name Jacobian Determinant (3D)
+  // **************************************************
+
+  //@{
+
   /// Compute determinant of the Jacobian matrix of a hexahedron
   ///   at the hexahedron center.
   /// @param orientation Orientation of hexahedra. +1 or -1.
   /// @param cube Cube with facet information.
   /// @pre     cube.Dimension() = 3. 
+  /// @param[out] Jacobian 3x3 Jacobian matrix.
   template <typename ORIENT_TYPE, typename VTYPE, 
             typename CTYPE, typename CUBE_TYPE, 
             typename DET_TYPE>
@@ -1970,13 +2110,13 @@ namespace IJK {
    const ORIENT_TYPE orientation,
    const CTYPE * vertex_coord,
    const CUBE_TYPE & cube,
-   DET_TYPE & Jacobian_determinant)
+   DET_TYPE & Jacobian_determinant,
+   CTYPE Jacobian[3][3])
   {
     typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
     typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
 
     const DTYPE DIM3(3);
-    CTYPE Jacobian[DIM3][DIM3];
     CTYPE temp_coord[DIM3];
 
     Jacobian_determinant = 0;
@@ -1999,17 +2139,95 @@ namespace IJK {
 
       // Reduce by factor of 4.
       IJK::divide_coord(DIM3, 4, Jacobian[d], Jacobian[d]);
-
-      IJK::determinant_3x3
-        (Jacobian[0], Jacobian[1], Jacobian[2], Jacobian_determinant);
-
-      if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
     }
-  
+
+    IJK::determinant_3x3
+      (Jacobian[0], Jacobian[1], Jacobian[2], Jacobian_determinant);
+
+    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+  }
+
+
+  /// Compute determinant of the Jacobian matrix of a hexahedron
+  ///   at the hexahedron center.
+  /// - Version which does not return Jacobian matrix.
+  /// @param orientation Orientation of hexahedra. +1 or -1.
+  /// @param cube Cube with facet information.
+  /// @pre     cube.Dimension() = 3. 
+  template <typename ORIENT_TYPE, typename VTYPE, 
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE>
+  void compute_hexahedron_center_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE & Jacobian_determinant)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    const DTYPE DIM3(3);
+    CTYPE Jacobian[DIM3][DIM3];
+
+    compute_hexahedron_center_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, Jacobian_determinant,
+       Jacobian);
   }
 
 
   /// Compute Jacobian matrix determinant of a hexahedron at a given corner.
+  /// @pre cube.Dimension() = 3. 
+  /// @param icorner0 Cube corner index.  Possible values are 0,1,...,7.
+  /// @param[out] v0coord Pointer to coordinates of vertex at icorner0.
+  /// @param[out] w0coord Pointer to coordinates of vertex adjacent
+  ///   to icorner0 in direction 0.
+  /// @param[out] w1coord Pointer to coordinates of vertex adjacent
+  ///   to icorner0 in direction 1.
+  /// @param[out] w2coord Pointer to coordinates of vertex adjacent
+  ///   to icorner0 in direction 2.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename CORNER_TYPE, typename DET_TYPE>
+  void compute_hexahedron_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const CORNER_TYPE icorner0,
+   DET_TYPE & Jacobian_determinant,
+   const CTYPE * & v0coord, const CTYPE * & w0coord, 
+   const CTYPE * & w1coord, const CTYPE * & w2coord)
+  {
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    const DTYPE DIM3(3);
+
+    // Multiple det at cube vertex i by orient_factor[i] 
+    //   to get correct sign of Jacobian determinant.
+    const static ORIENT_TYPE orient_factor[] = { 1, -1, -1, 1, -1, 1, 1, -1 };
+
+    const NTYPE jneighbor0 = cube.VertexNeighbor(icorner0, 0);
+    const NTYPE jneighbor1 = cube.VertexNeighbor(icorner0, 1);
+    const NTYPE jneighbor2 = cube.VertexNeighbor(icorner0, 2);
+    const VTYPE iv0 = hex_vert[icorner0];
+    const VTYPE jw0 = hex_vert[jneighbor0];
+    const VTYPE jw1 = hex_vert[jneighbor1];
+    const VTYPE jw2 = hex_vert[jneighbor2];
+    v0coord = vertex_coord + iv0*DIM3;
+    w0coord = vertex_coord + jw0*DIM3;
+    w1coord = vertex_coord + jw1*DIM3;
+    w2coord = vertex_coord + jw2*DIM3;
+
+    IJK::determinant_point_3D(v0coord, w0coord, w1coord, w2coord, 
+                              Jacobian_determinant);
+    Jacobian_determinant = Jacobian_determinant * orient_factor[icorner0];
+
+    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+  }
+
+
+  /// Compute Jacobian matrix determinant of a hexahedron at a given corner.
+  /// - Version which does not return icorner coordinates.
   /// @pre cube.Dimension() = 3. 
   /// @param icorner0 Cube corner index.  Possible values are 0,1,...,7.
   template <typename VTYPE, typename ORIENT_TYPE,
@@ -2023,32 +2241,14 @@ namespace IJK {
    const CORNER_TYPE icorner0,
    DET_TYPE & Jacobian_determinant)
   {
-    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
-    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+    const CTYPE * vcoord0;
+    const CTYPE * wcoord0;
+    const CTYPE * wcoord1;
+    const CTYPE * wcoord2;
 
-    const DTYPE DIM3(3);
-
-    // Multiple det at cube vertex i by orient_factor[i] 
-    //   to get correct sign of Jacobian determinant.
-    const static ORIENT_TYPE orient_factor[] = { 1, -1, -1, 1, -1, 1, 1, -1 };
-
-    const NTYPE icorner1 = cube.VertexNeighbor(icorner0, 0);
-    const NTYPE icorner2 = cube.VertexNeighbor(icorner0, 1);
-    const NTYPE icorner3 = cube.VertexNeighbor(icorner0, 2);
-    const VTYPE iv0 = hex_vert[icorner0];
-    const VTYPE iv1 = hex_vert[icorner1];
-    const VTYPE iv2 = hex_vert[icorner2];
-    const VTYPE iv3 = hex_vert[icorner3];
-    const CTYPE * v0coord = vertex_coord + iv0*DIM3;
-    const CTYPE * v1coord = vertex_coord + iv1*DIM3;
-    const CTYPE * v2coord = vertex_coord + iv2*DIM3;
-    const CTYPE * v3coord = vertex_coord + iv3*DIM3;
-
-    IJK::determinant_point_3D(v0coord, v1coord, v2coord, v3coord, 
-                              Jacobian_determinant);
-    Jacobian_determinant = Jacobian_determinant * orient_factor[icorner0];
-
-    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+    compute_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord,  cube, icorner0,
+       Jacobian_determinant, vcoord0, wcoord0, wcoord1, wcoord2);
   }
 
 
@@ -2322,124 +2522,237 @@ namespace IJK {
        Jacobian_determinant);
   }
 
-  ///@}
 
-
-  // **************************************************
-  /// @name 3D vector operations
-  // **************************************************
-
-  ///@{
-
-  /// Compute 3D unit vector.
-  template <typename CTYPE0, typename MTYPE0, 
-            typename CTYPE1, typename CTYPE2, typename MTYPE1>
-  void compute_unit_vector_3D
-  (const CTYPE0 coord0[], const CTYPE1 coord1[],
-   const MTYPE0 max_small_magnitude, CTYPE2 coord2[],
-   MTYPE1 & magnitude, bool & flag_zero)
+  /// Compute normalized determinant of the Jacobian matrix of a hexahedron
+  ///   at the hexahedron center.
+  /// @param orientation Orientation of hexahedra. +1 or -1.
+  /// @param cube Cube with facet information.
+  /// @pre     cube.Dimension() = 3. 
+  template <typename ORIENT_TYPE, typename VTYPE, 
+            typename CTYPE, typename CUBE_TYPE, typename MTYPE,
+            typename DET_TYPE>
+  void compute_hexahedron_center_normalized_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const MTYPE max_small_magnitude,
+   DET_TYPE & Jacobian_determinant,
+   bool & flag_zero)
   {
-    const int DIM3 = 3;
-    compute_unit_vector(DIM3, coord0, coord1, max_small_magnitude, coord2,
-                        magnitude, flag_zero);
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+
+    const DTYPE DIM3(3);
+
+    CTYPE Jacobian[DIM3][DIM3];
+    DET_TYPE L0, L1, L2;
+
+    compute_hexahedron_center_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, Jacobian_determinant,
+       Jacobian);
+
+    compute_magnitude_3D(Jacobian[0], L0);
+    compute_magnitude_3D(Jacobian[1], L1);
+    compute_magnitude_3D(Jacobian[2], L2);
+
+    if (L0 > max_small_magnitude &&
+        L1 > max_small_magnitude &&
+        L2 > max_small_magnitude) {
+      flag_zero = false;
+      Jacobian_determinant = (Jacobian_determinant/(L0*L1*L2));
+      return;
+    }
+    else {
+      Jacobian_determinant = 0;
+      flag_zero = true;
+    }
+  
   }
 
-  ///@}
 
-
-  // **************************************************
-  /// @name 3D distances
-  // **************************************************
-
-  ///@{
-
-  /*! 
-   *  Compute signed (L2) distance from coord0[] to hyperplane through coord1[].
-   *  @tparam DIST_TYPE Distance type.  DIST_TYPE should be a signed type.
-   *  @param coord0[] Compute distance from coord0[].
-   *  @param coord1[] Plane passes through coord1[].
-   *  @param orth_dir[] Direction orthogonal to hyperplane.
-   *  @param[out] distance Signed distance to hyperplane.
-   *    - distance = inner product of (coord0[]-coord1[]) and orth_dir[].
-   *  @pre orth_dir[] is a unit vector.
-   */
-  template <typename CTYPE0, typename CTYPE1, 
-            typename VTYPE, typename DIST_TYPE>
-  void compute_signed_distance_to_plane_3D
-  (const CTYPE0 coord0[], const CTYPE1 coord1[],
-   const VTYPE orth_dir[], DIST_TYPE & distance)
+  /// Compute normalized Jacobian matrix determinant 
+  ///   of a hexahedron at a given corner.\br
+  /// Compute the determinant of the thee unit vectors in the directions
+  ///   of the three edges incident on each hexahedron corner.
+  /// @pre cube.Dimension() = 3. 
+  /// @param icorner0 Cube corner index.  Possible values are 0,1,...,7.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename CORNER_TYPE, typename MTYPE, typename DET_TYPE>
+  void compute_hexahedron_normalized_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const CORNER_TYPE icorner0,
+   const MTYPE max_small_magnitude,
+   DET_TYPE & Jacobian_determinant,
+   bool & flag_zero)
   {
-    const int DIM3 = 3;
-    compute_signed_distance_to_hyperplane
-      (DIM3, coord0, coord1, orth_dir, distance);
+    typedef typename CUBE_TYPE::DIMENSION_TYPE DTYPE;
+
+    const DTYPE DIM3(3);
+    DET_TYPE L0, L1, L2;
+    const CTYPE * v0coord;
+    const CTYPE * w0coord;
+    const CTYPE * w1coord;
+    const CTYPE * w2coord;
+
+    compute_hexahedron_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord,  cube, icorner0,
+       Jacobian_determinant, v0coord, w0coord, w1coord, w2coord);
+
+    compute_distance_3D(v0coord, w0coord, L0);
+    compute_distance_3D(v0coord, w1coord, L1);
+    compute_distance_3D(v0coord, w2coord, L2);
+
+    if (L0 > max_small_magnitude &&
+        L1 > max_small_magnitude &&
+        L2 > max_small_magnitude) {
+      flag_zero = false;
+      Jacobian_determinant = (Jacobian_determinant/(L0*L1*L2));
+      return;
+    }
+    else {
+      Jacobian_determinant = 0;
+      flag_zero = true;
+    }
+
   }
 
-  /*!
-   *  Compute (unsigned, L2) distance from coord0[] to plane through coord1[].
-   *  @param coord0[] Compute distance from coord0[].
-   *  @param coord1[] Plane passes through coord1[].
-   *  @param orth_dir[] Direction orthogonal to hyperplane.
-   *  @param[out] distance Distance to hyperplane.
-   *     - distance = the absolute value of inner product of 
-   *                 (coord0[]-coord1[]) and orth_dir[].
-   *  @pre orth_dir[] is a unit vector.
-   */
-  template <typename CTYPE0, typename CTYPE1, 
-            typename VTYPE, typename DIST_TYPE>
-  void compute_distance_to_plane_3D
-  (const CTYPE0 coord0[], const CTYPE1 coord1[],
-   const VTYPE orth_dir[], DIST_TYPE & distance)
+  /// Compute min/max of the nine normalized Jacobian matrix determinants 
+  ///   of a hexahedron.
+  /// @pre cube.Dimension() = 3. 
+  /// @param[out] num_determinants 
+  ///   Number of determinants computed (not skipped).
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, typename MTYPE,
+            typename DET_TYPE0, typename DET_TYPE1,
+            typename NTYPE>
+  void compute_min_max_hexahedron_normalized_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const MTYPE max_small_magnitude,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   NTYPE & num_determinants)
   {
-    const int DIM3 = 3;
-    compute_distance_to_hyperplane
-      (DIM3, coord0, coord1, orth_dir, distance);
+    typedef typename CUBE_TYPE::NUMBER_TYPE CUBE_NTYPE;
+
+    bool flag_zero;
+    DET_TYPE0 det;
+
+    num_determinants = 0;
+    min_Jacobian_determinant = 0;
+    max_Jacobian_determinant = 0;
+
+    compute_hexahedron_center_normalized_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, max_small_magnitude,
+       det, flag_zero);
+
+    if (!flag_zero) { 
+      min_Jacobian_determinant = det;
+      max_Jacobian_determinant = det;
+      num_determinants++; 
+    }
+
+    for (CUBE_NTYPE i0 = 0; i0 < cube.NumVertices(); i0++) {
+
+      compute_hexahedron_normalized_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, 
+         max_small_magnitude, det, flag_zero);
+
+      if (!flag_zero) {
+
+        if (num_determinants == 0) {
+          min_Jacobian_determinant = det;
+          max_Jacobian_determinant = det;
+        }
+        else {
+          if (det < min_Jacobian_determinant) 
+            { min_Jacobian_determinant = det; }
+          if (det > max_Jacobian_determinant) 
+            { max_Jacobian_determinant = det; }
+        }
+
+        num_determinants++;
+      }
+    }
+
   }
 
-  /*!
-   *  Compute (L2) distance squared from coord0[] to line through coord1[].
-   *  @param coord0[] Compute distance from coord0[].
-   *  @param coord1[] Line passes through coord1[].
-   *  @param dir[] Line direction.
-   *  @param[out] distance_squared
-   *    Distance squared from coord0[] to line through coord1[].
-   *    - distance_squared = Magnitude squared of w where w is the component
-   *       of (coord0[]-coord1[]) orthogonal to dir[].
-   *    - w = (coord0[]-coord1[]) - x*dir[] where x is the inner product
-   *       of (coord0[]-coord1[]) and dir[].
-   *  @pre dir[] is a unit vector.
-   */
-  template <typename CTYPE0, typename CTYPE1, 
-            typename VTYPE, typename DIST_TYPE>
-  void compute_distance_squared_to_line_3D
-  (const CTYPE0 coord0[], const CTYPE1 coord1[],
-   const VTYPE dir[], DIST_TYPE & distance_squared)
+  /// Compute min/max of the eight normalized Jacobian matrix determinants 
+  ///   at the eight vertices of a hexahedron.
+  /// @pre cube.Dimension() = 3. 
+  template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, typename MTYPE,
+            typename DET_TYPE0, typename DET_TYPE1,
+            typename NTYPE>
+  void compute_min_max_hex_vert_normalized_Jacobian_determinant_3D
+  (const VTYPE0 hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const MTYPE max_small_magnitude,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant,
+   VTYPE1 & vert_with_min_Jacobian_determinant,
+   VTYPE2 & vert_with_max_Jacobian_determinant,
+   NTYPE & num_determinants)
   {
-    const int DIM3 = 3;
-    compute_distance_squared_to_line
-      (DIM3, coord0, coord1, dir, distance_squared);
-  }
+    typedef typename CUBE_TYPE::NUMBER_TYPE CUBE_NTYPE;
 
-  /*!
-   *  Compute (unsigned, L2) distance from coord0[] to line through coord1[].
-   *  @param dimension Coordinate dimension (= number of coordinates.)
-   *  @param coord0[] Compute distance from coord0[].
-   *  @param coord1[] Line passes through coord1[].
-   *  @param dir[] Line direction.
-   *  @param[out] distance Distance from coord0[] to line through coord1[].
-   *    - distance = Magnitude of w where w is the component
-   *       of (coord0[]-coord1[]) orthogonal to dir[].
-   *    - w = (coord0[]-coord1[]) - x*dir[] where x is the inner product
-   *       of (coord0[]-coord1[]) and dir[].
-   *  @pre dir[] is a unit vector.
-   */
-  template <typename CTYPE0, typename CTYPE1, 
-            typename VTYPE, typename DIST_TYPE>
-  void compute_distance_to_line_3D
-  (const CTYPE0 coord0[], const CTYPE1 coord1[],
-   const VTYPE dir[], DIST_TYPE & distance)
-  {
-    const int DIM3 = 3;
-    compute_distance_to_line(DIM3, coord0, coord1, dir, distance);
+    DET_TYPE0 det;
+    bool flag_zero;
+
+    min_Jacobian_determinant = 0;
+    max_Jacobian_determinant = 0;
+    num_determinants = 0;
+
+    compute_hexahedron_normalized_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, 0, max_small_magnitude,
+       det, flag_zero);
+
+    if (!flag_zero) {
+      min_Jacobian_determinant = det;
+      max_Jacobian_determinant = det;
+      vert_with_min_Jacobian_determinant = hex_vert[0];
+      vert_with_max_Jacobian_determinant = hex_vert[0];
+      num_determinants++;
+    }
+
+    for (CUBE_NTYPE i0 = 1; i0 < cube.NumVertices(); i0++) {
+
+      compute_hexahedron_normalized_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, max_small_magnitude,
+         det, flag_zero);
+
+      if (!flag_zero) {
+        
+        if (num_determinants == 0) {
+          min_Jacobian_determinant = det; 
+          vert_with_min_Jacobian_determinant = hex_vert[i0];
+          max_Jacobian_determinant = det; 
+          vert_with_max_Jacobian_determinant = hex_vert[i0];
+        }
+        else {
+          if (det < min_Jacobian_determinant) { 
+            min_Jacobian_determinant = det; 
+            vert_with_min_Jacobian_determinant = hex_vert[i0];
+          }
+
+          if (det > max_Jacobian_determinant) { 
+            max_Jacobian_determinant = det; 
+            vert_with_max_Jacobian_determinant = hex_vert[i0];
+          }
+        }
+        
+        num_determinants++;
+      }
+    }
   }
 
   ///@}

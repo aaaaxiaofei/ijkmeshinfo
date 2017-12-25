@@ -257,6 +257,15 @@ void output_min_max_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal);
+void output_min_max_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant);
+void output_min_max_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal);
 void write_non_manifold_edges();
 
 
@@ -296,6 +305,8 @@ typedef enum
    REPORT_DEEP_PARAM, OUT_VALUES_PARAM,
    OUT_MIN_ANGLE_PARAM, OUT_MAX_ANGLE_PARAM, 
    OUT_MIN_JACOBIAN_DET_PARAM, OUT_MAX_JACOBIAN_DET_PARAM,
+   OUT_MIN_NORMALIZED_JACOBIAN_DET_PARAM, 
+   OUT_MAX_NORMALIZED_JACOBIAN_DET_PARAM,
    PLOT_ANGLES_PARAM, PLOT_EDGE_LENGTHS_PARAM,
    PLOT_JACOBIAN_PARAM,
    FOR_EACH_TYPE_PARAM, 
@@ -315,6 +326,7 @@ const char * parameter_string[] =
    "-list_dup", "-internal",
    "-report_deep", "-out_values", "-out_min_angle", "-out_max_angle",
    "-out_min_jdet", "-out_max_jdet",
+   "-out_min_normalized_jdet", "-out_max_normalized_jdet",
    "-plot_angles", "-plot_edge_lengths", "-plot_jacobian",
    "-for_each_type",
    "-max_out", "-terse", "-help", "-unknown"};
@@ -350,6 +362,15 @@ int main(int argc, char **argv)
     if (io_info.flag_general_info) { output_general_info(polymesh); }
     else if (io_info.flag_output_min_angle || io_info.flag_output_max_angle) {
       output_min_max_angle
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
+    }
+    else if (io_info.flag_output_min_Jacobian_determinant ||
+             io_info.flag_output_max_Jacobian_determinant ||
+             io_info.flag_output_min_normalized_Jacobian_determinant ||
+             io_info.flag_output_max_normalized_Jacobian_determinant) {
+      output_min_max_Jacobian_determinants
+        (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
+      output_min_max_normalized_Jacobian_determinants
         (mesh_data, polymesh, vertex_coord, io_info, flag_internal); 
     }
     else if (io_info.flag_output_min_Jacobian_determinant ||
@@ -466,10 +487,19 @@ int main(int argc, char **argv)
     }
 
     if (vlist_flag) {
-      if (io_info.flag_output_min_Jacobian_determinant) {
-        output_hex_mesh_vertices_with_min_Jacobian_determinants
-          (mesh_data, polymesh, vertex_info, vertex_coord,
-           io_info, flag_internal);
+      if (io_info.flag_output_min_Jacobian_determinant ||
+          io_info.flag_output_min_normalized_Jacobian_determinant) {
+
+        if (io_info.flag_output_min_Jacobian_determinant) {
+          output_hex_mesh_vertices_with_min_Jacobian_determinants
+            (mesh_data, polymesh, vertex_info, vertex_coord,
+             io_info, flag_internal);
+        }
+        else if (io_info.flag_output_min_normalized_Jacobian_determinant) {
+          output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
+            (mesh_data, polymesh, vertex_info, vertex_coord,
+             io_info, flag_internal);
+        }
       }
       else {
         // Output all vertices.
@@ -843,12 +873,19 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
 
   io_info.flag_output_min_Jacobian_determinant = true;
   io_info.flag_output_max_Jacobian_determinant = true;
-  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
   output_min_max_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info, false,
-     min_Jacobian_determinant, max_Jacobian_determinant);
+    (mesh_data, polymesh, vertex_coord, io_info, false);
   if (flag_internal) {
     output_min_max_Jacobian_determinants
+      (mesh_data, polymesh, vertex_coord, io_info, true);
+  }
+
+  io_info.flag_output_min_normalized_Jacobian_determinant = true;
+  io_info.flag_output_max_normalized_Jacobian_determinant = true;
+  output_min_max_normalized_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, io_info, false);
+  if (flag_internal) {
+    output_min_max_normalized_Jacobian_determinants
       (mesh_data, polymesh, vertex_coord, io_info, true);
   }
 
@@ -1179,6 +1216,36 @@ void output_min_max_Jacobian_determinants
   output_min_max_Jacobian_determinants
     (mesh_data, polymesh, vertex_coord, io_info,
      flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void output_min_max_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
+{
+  const int dimension = mesh_data.dimension;
+  const int mesh_dimension = mesh_data.mesh_dimension;
+
+  if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
+    output_min_max_hexahedra_normalized_Jacobian_determinants
+      (mesh_data, polymesh, vertex_coord, io_info,
+       flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
+  }
+}
+
+
+void output_min_max_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
+ const bool flag_internal)
+{
+  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
+
+  output_min_max_normalized_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, io_info, flag_internal,
+     min_Jacobian_determinant, max_Jacobian_determinant);
 }
 
 
@@ -4059,6 +4126,16 @@ void parse_command_line(int argc, char **argv)
 
       case OUT_MAX_JACOBIAN_DET_PARAM:
         io_info.flag_output_max_Jacobian_determinant = true;
+        io_info.flag_general_info = false;
+        break;
+
+      case OUT_MIN_NORMALIZED_JACOBIAN_DET_PARAM:
+        io_info.flag_output_min_normalized_Jacobian_determinant = true;
+        io_info.flag_general_info = false;
+        break;
+
+      case OUT_MAX_NORMALIZED_JACOBIAN_DET_PARAM:
+        io_info.flag_output_max_normalized_Jacobian_determinant = true;
         io_info.flag_general_info = false;
         break;
 

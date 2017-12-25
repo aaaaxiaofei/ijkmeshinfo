@@ -1165,6 +1165,31 @@ void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
 }
 
 
+void IJKMESHINFO::output_min_max_hexahedra_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_min_max_hexahedra_normalized_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_normalized_Jacobian_determinant,
+     io_info.flag_output_max_normalized_Jacobian_determinant,
+     flag_internal, "normalized Jacobian determinant", 
+     compute_min_max_hexahedra_normalized_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
 // Output hexahedra with min Jacobian determinants.
 void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
@@ -1265,6 +1290,81 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
         if (flag_minv) { cout << "  " << jpoly; }
         else {
           cout << "  Vertex " << iv << ".  Min Jacobian det in polytopes: "
+               << jpoly;
+        }
+        flag_minv = true;
+      }
+    }
+
+    if (flag_minv) { cout << endl; }
+  }
+
+}
+
+
+// Output hex mesh vertices with min normalized Jacobian determinants.
+void IJKMESHINFO::
+output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+ const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
+  int poly_with_min_val, poly_with_max_val;
+  VERTEX_INDEX vert_with_min_val, vert_with_max_val;
+  const CUBE_TYPE cube(DIM3);
+  const COORD_TYPE max_small_magnitude(0.0);
+  IJK::PROCEDURE_ERROR error
+    ("output_hex_mesh_vertices_with_min_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  compute_min_max_hex_vert_normalized_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     min_Jacobian_determinant, max_Jacobian_determinant,
+     poly_with_min_val, poly_with_max_val, 
+     vert_with_min_val, vert_with_max_val);
+
+  cout << "Vertices with minimum normalized Jacobian determinant " 
+       << min_Jacobian_determinant <<  ":" << endl;
+
+  for (VERTEX_INDEX iv = 0; iv < vertex_info.NumVertices(); iv++) {
+    bool flag_minv = false;
+
+    for (int j = 0; j < vertex_info.NumIncidentPoly(iv); j++) {
+      const int jpoly = vertex_info.IncidentPoly(iv, j);
+      COORD_TYPE det;
+      int kloc;
+      bool flag_zero;
+
+      if (polymesh.DoesPolyContainVertex(jpoly,iv,kloc)) {
+        IJK::compute_hexahedron_normalized_Jacobian_determinant_3D
+          (polymesh.VertexList(jpoly), mesh_data.orientation,
+           vertex_coord, cube, kloc, max_small_magnitude, det, flag_zero);
+      }
+      else {
+        error.AddMessage
+          ("Programming error.  Inconsistency between polymesh and vertex adjacency list.");
+        error.AddMessage
+          ("  Vertex adjacency list for vertex ", iv,
+           " contains poly ", jpoly, ".");
+        error.AddMessage
+          ("  Polymesh poly ", jpoly, " does not have vertex ", iv, ".");
+        throw error;
+      }
+
+      if (flag_zero) { continue; }
+
+      if ((iv == vert_with_min_val && jpoly == poly_with_min_val) ||
+          (det <= min_Jacobian_determinant)) {
+        if (flag_minv) { cout << "  " << jpoly; }
+        else {
+          cout << "  Vertex " << iv 
+               << ".  Min normalized Jacobian det in polytopes: "
                << jpoly;
         }
         flag_minv = true;
@@ -1497,6 +1597,8 @@ void IO_INFO::Init()
   flag_output_all_min_max = false;
   flag_output_min_Jacobian_determinant = false;
   flag_output_max_Jacobian_determinant = false;
+  flag_output_min_normalized_Jacobian_determinant = false;
+  flag_output_max_normalized_Jacobian_determinant = false;
   flag_general_info = true;
 };
 
