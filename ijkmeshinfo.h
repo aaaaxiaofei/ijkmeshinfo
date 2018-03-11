@@ -127,8 +127,52 @@ namespace IJKMESHINFO {
     { return(orientation_conflict); }
   };
 
-  typedef typename IJK::POLYMESH_DATA<VERTEX_INDEX,int,POLY_DATA> 
-  POLYMESH_TYPE;
+
+  // **************************************************
+  // Class VERTEX_DATA
+  // **************************************************
+
+  class VERTEX_DATA {
+
+  protected:
+    void Init();
+
+  public:
+
+    /// True if vertex is on surface/volume boundary.
+    bool on_boundary;
+
+  public:
+    VERTEX_DATA() { Init(); }
+
+    /// Return true if vertex is on surface/volume boundary.
+    bool OnBoundary() const
+    { return(on_boundary); }
+
+    /// Return true if vertex is internal to surface/volume.
+    bool IsInternal() const
+    { return(!OnBoundary()); }
+
+  };
+
+
+  // **************************************************
+  // Class POLYMESH_TYPE
+  // **************************************************
+
+  class POLYMESH_TYPE:public IJK::POLYMESH_DATA<VERTEX_INDEX,int,POLY_DATA> {
+
+  public:
+
+    /// Vertex data.
+    std::vector<VERTEX_DATA> vertex_data;
+
+  public:
+
+    /// Return number of vertices.
+    int NumVertices() const
+    { return(vertex_data.size()); }
+  };
 
 
   // **************************************************

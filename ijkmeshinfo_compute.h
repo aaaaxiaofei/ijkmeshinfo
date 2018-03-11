@@ -1,5 +1,5 @@
 /// \file ijkmeshinfo_compute.h
-/// Compute angles, edge lengths, etc.
+/// Compute angles, edge lengths, Jacobian determinants, etc.
 
 
 /*
@@ -29,8 +29,10 @@
 namespace IJKMESHINFO {
 
   // **************************************************
-  // COMPUTE ANGLE ROUTINES
+  //! @name Compute angle routines
   // **************************************************
+
+  ///@{
 
   /// Compute min/max polygon angles.
   /// @pre mesh_dimension == 2.
@@ -149,10 +151,14 @@ namespace IJKMESHINFO {
    const ANGLE_TYPE min_angle, const ANGLE_TYPE max_angle,
    int & num_le, int & num_ge);
 
+  ///@}
+
 
   // **************************************************
-  // COMPUTE DIHEDRAL ANGLE ROUTINES
+  //! @name Compute dihedral angle routines
   // **************************************************
+
+  ///@{
 
   /// Compute min/max dihedral angles of tetrahedra.
   /// @pre polymesh is a mesh of tetrahedra.
@@ -192,10 +198,14 @@ namespace IJKMESHINFO {
    const COORD_TYPE * vertex_coord,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle, int & num_val);
 
+  ///@}
+
 
   // **************************************************
-  // COMPUTE EDGE LENGTH ROUTINES
+  //! @name Compute edge length routines
   // **************************************************
+
+  ///@{
 
   /// Compute min/max edge lengths of polgyons.
   void compute_min_max_polygon_edge_lengths
@@ -286,10 +296,14 @@ namespace IJKMESHINFO {
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & num_lengths);
 
+  ///@}
+
 
   // **************************************************
-  // COMPUTE JACOBIAN ROUTINES
+  //! @name Compute Jacobian determinants
   // **************************************************
+
+  ///@{
 
   /// Compute min/max Jacobian matrix determinants of hexahedra.
   /// @pre dimension = 3. 
@@ -313,6 +327,94 @@ namespace IJKMESHINFO {
    COORD_TYPE & max_Jacobian_determinant,
    int & num_Jacobian_determinants);
 
+  /// Compute min/max of the Jacobian matrix determinants of hexahedra vertices.
+  /// - Version with input argument mesh_data.
+  /// - Version which returns vertices with min/max Jacobian determinants.
+  void compute_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant,
+   int & vert_with_min_Jacobian_determinant, 
+   int & vert_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the Jacobian matrix determinants 
+  ///   of hexahedra vertices.
+  /// Ignore hexahedra centers.
+  /// - Version with input argument mesh_data.
+  void compute_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the eight Jacobian matrix determinants 
+  ///   at the eight vertices of a hexahedron.
+  /// @pre dimension = 3. 
+  void compute_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const VERTEX_INDEX hex_vert[], const int num_vert,
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant,
+   int & num_Jacobian_determinants);
+
+  /// Compute min/max of the Jacobian matrix determinants 
+  ///   at the internal vertices in a hex mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the Jacobian matrix determinants 
+  ///   at the internal vertices in a hex mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the eight Jacobian matrix determinants 
+  ///   at the vertices of hexahedron ihex which are internal to the mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_Jacobian_determinants_ihex
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const int ihex,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant,
+   int & num_Jacobian_determinants);
+
+  ///@}
+
+
+  // **************************************************
+  //! @name Compute normalized Jacobian determinants
+  // **************************************************
+
+  ///@{
+
   /// Compute min/max normalized Jacobian matrix determinants of hexahedra.
   /// - Version with input argument mesh_data.
   void compute_min_max_hexahedra_normalized_Jacobian_determinants
@@ -334,32 +436,6 @@ namespace IJKMESHINFO {
    COORD_TYPE & max_Jacobian_determinant,
    int & num_Jacobian_determinants);
 
-  /// Compute min/max Jacobian matrix determinants of hexahedra.
-  /// - Version with input argument mesh_data.
-  /// - Version which returns vertices with min/max Jacobian determinants.
-  void compute_min_max_hex_vert_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
-   const bool flag_internal,
-   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
-   int & poly_with_min_Jacobian_determinant, 
-   int & poly_with_max_Jacobian_determinant,
-   int & vert_with_min_Jacobian_determinant, 
-   int & vert_with_max_Jacobian_determinant);
-
-  /// Compute min/max of the eight Jacobian matrix determinants 
-  ///   at the eight vertices of a hexahedron.
-  /// @pre dimension = 3. 
-  void compute_min_max_hex_vert_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const VERTEX_INDEX hex_vert[], const int num_vert,
-   const COORD_TYPE * vertex_coord,
-   COORD_TYPE & min_Jacobian_determinant,
-   COORD_TYPE & max_Jacobian_determinant,
-   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
-   VERTEX_INDEX & vert_with_max_Jacobian_determinant,
-   int & num_Jacobian_determinants);
-
   /// Compute min/max normalized Jacobian matrix determinants of hexahedra.
   /// - Version with input argument mesh_data.
   /// - Version which returns vertices with min/max Jacobian determinants.
@@ -373,6 +449,18 @@ namespace IJKMESHINFO {
    int & vert_with_min_Jacobian_determinant, 
    int & vert_with_max_Jacobian_determinant);
 
+  /// Compute min/max of the normalized Jacobian matrix determinants 
+  ///   of hexahedra vertices.
+  /// Ignore hexahedra centers.
+  /// - Version with input argument mesh_data.
+  void compute_min_max_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant);
+
   /// Compute min/max of the eight normalized Jacobian matrix determinants 
   ///   at the eight vertices of a hexahedron.
   /// @pre dimension = 3. 
@@ -385,6 +473,49 @@ namespace IJKMESHINFO {
    VERTEX_INDEX & vert_with_min_Jacobian_determinant,
    VERTEX_INDEX & vert_with_max_Jacobian_determinant,
    int & num_Jacobian_determinants);
+
+  /// Compute min/max of the normalized Jacobian matrix determinants 
+  ///   at the internal vertices in a hex mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the normalized Jacobian matrix determinants 
+  ///   at the internal mesh in a hex mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant);
+
+  /// Compute min/max of the eight normalized Jacobian matrix determinants 
+  ///   at the vertices of hexahedron ihex which are internal to the mesh.
+  /// @pre dimension = 3. 
+  void compute_min_max_internal_hex_vert_normalized_Jacobian_determinants_ihex
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh,
+   const COORD_TYPE * vertex_coord,
+   const int ihex,
+   COORD_TYPE & min_Jacobian_determinant,
+   COORD_TYPE & max_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_min_Jacobian_determinant,
+   VERTEX_INDEX & vert_with_max_Jacobian_determinant,
+   int & num_Jacobian_determinants);
+
+
+  ///@}
 
 }
 

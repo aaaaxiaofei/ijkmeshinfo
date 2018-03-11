@@ -91,10 +91,17 @@ namespace IJKMESHINFO {
     /// If true, output general information about the mesh.
     bool flag_general_info;
 
+    /// Compute Jacobian at vertices.
+    IJK::SET_VALUE<bool> flag_vJacobian;
+
+    /// Compute Jacobian at polytopes including poly center.
+    IJK::SET_VALUE<bool> flag_pJacobian;
 
   public:
     /// Constructor
-    IO_INFO():angle_le(0),angle_ge(180) { Init(); };
+    IO_INFO():angle_le(0),angle_ge(180),
+              flag_vJacobian(false),flag_pJacobian(true)
+    { Init(); };
   };
 
 
@@ -364,6 +371,42 @@ namespace IJKMESHINFO {
   (const MESH_DATA & mesh_data,
    const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant);
+
+  /// Output minimum and maximum of the Jacobian matrix determinants
+  ///   at the hex vertices (not at hex centers.)
+  void output_min_max_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant);
+
+  /// Output minimum and maximum of the normalized Jacobian matrix determinants
+  ///   at the hex vertices (not at hex centers.)
+  void output_min_max_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant);
+
+  /// Output minimum and maximum of the Jacobian matrix determinants
+  ///   at the vertices in the interior of the hex mesh.
+  void output_min_max_internal_hex_vert_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant);
+
+  /// Output minimum and maximum of the normalized Jacobian matrix determinants
+  ///   at the vertices in the interior of the hex mesh.
+  void output_min_max_internal_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info,
    COORD_TYPE & min_Jacobian_determinant, 
    COORD_TYPE & max_Jacobian_determinant);
 

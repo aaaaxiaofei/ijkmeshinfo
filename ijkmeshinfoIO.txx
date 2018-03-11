@@ -100,6 +100,44 @@ namespace IJKMESHINFO {
        compute_min_max_values, min_value, max_value);
   }
 
+
+  /// Output minimum and maximum values.
+  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+            typename MINVAL_TYPE, typename MAXVAL_TYPE,
+            typename PMIN_TYPE, typename PMAX_TYPE>
+  void output_min_max_values
+  (std::ostream & out,
+   const MDATA_TYPE & mesh_data,
+   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const bool flag_output_min,
+   const bool flag_output_max,
+   const char * value_descriptor,
+   void compute_min_max_values
+   (const MDATA_TYPE &, const MTYPE &, const CTYPE *,
+    MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &),
+   MINVAL_TYPE & min_val, MAXVAL_TYPE & max_val)
+  {
+    PMIN_TYPE poly_with_min_val;
+    PMAX_TYPE poly_with_max_val;
+    const char * internal_descriptor;
+
+    using std::endl;
+
+    compute_min_max_values
+      (mesh_data, polymesh, vertex_coord,
+       min_val, max_val, poly_with_min_val, poly_with_max_val);
+
+    if (flag_output_min) {
+      out << "Min " << value_descriptor 
+          << ": " << min_val << endl; 
+    }
+
+    if (flag_output_max) {
+      out << "Max " << value_descriptor
+          << ": " << max_val << endl; 
+    }
+  }
+
   /// Print message "(Additional polytopes not listed.)"
   template <typename NTYPE0, typename NTYPE1>
   void output_additional_not_listed_message

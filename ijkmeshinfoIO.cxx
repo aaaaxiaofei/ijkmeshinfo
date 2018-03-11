@@ -1190,6 +1190,100 @@ void IJKMESHINFO::output_min_max_hexahedra_normalized_Jacobian_determinants
 }
 
 
+void IJKMESHINFO::output_min_max_hex_vert_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error("output_min_max_hex_vert_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_Jacobian_determinant,
+     io_info.flag_output_max_Jacobian_determinant,
+     flag_internal, "Jacobian determinant (at vert)", 
+     compute_min_max_hex_vert_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void IJKMESHINFO::output_min_max_hex_vert_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error("output_min_max_hex_vert_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_Jacobian_determinant,
+     io_info.flag_output_max_Jacobian_determinant,
+     flag_internal, "normalized Jacobian determinant (at vert)", 
+     compute_min_max_hex_vert_normalized_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void IJKMESHINFO::output_min_max_internal_hex_vert_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_min_max_internal_hex_vert_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_Jacobian_determinant,
+     io_info.flag_output_max_Jacobian_determinant,
+     "Jacobian determinant (at internal vert)", 
+     compute_min_max_internal_hex_vert_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
+void IJKMESHINFO::output_min_max_internal_hex_vert_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info,
+ COORD_TYPE & min_Jacobian_determinant, 
+ COORD_TYPE & max_Jacobian_determinant)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_min_max_internal_hex_vert_normalized_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+
+  output_min_max_values
+    (cout, mesh_data, polymesh, vertex_coord, 
+     io_info.flag_output_min_Jacobian_determinant,
+     io_info.flag_output_max_Jacobian_determinant,
+     "Jacobian determinant (at internal vert)", 
+     compute_min_max_internal_hex_vert_normalized_Jacobian_determinants,
+     min_Jacobian_determinant, max_Jacobian_determinant);
+}
+
+
 // Output hexahedra with min Jacobian determinants.
 void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
@@ -1452,7 +1546,7 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-min_numv <N>] [-max_numv <N>]" << endl;
   cerr << "  [-angle_le <A>] [-angle_ge <A>]" << endl;
   cerr << "  [-facet_angle_le <A>] [-facet_angle_ge <A>]" << endl;
-  cerr << "  [-list_dup] [-internal]" << endl;
+  cerr << "  [-list_dup] [-internal] [-internal_vert]" << endl;
   cerr << "  [-selfI]" << endl;
   cerr << "  [-out_values] [-out_min_angle] [-out_max_angle]"
        << endl;
@@ -1537,7 +1631,9 @@ void IJKMESHINFO::help_msg()
        << "       or equal to <A>." << endl;
   cerr << "  -list_dup:          List duplicate poly vertices or poly vertices" << endl;
   cerr << "                           with identical coordinates." << endl;
-  cerr << "  -internal:          Report only angles for internal polygons."
+  cerr << "  -internal:          Report only min/max values for internal polytopes."
+       << endl;
+  cerr << "  -internal_vert:     Report only min/max values at internal mesh vertices."
        << endl;
   cerr << "  -out_values:        Output only values for -manifold option."
        << endl;

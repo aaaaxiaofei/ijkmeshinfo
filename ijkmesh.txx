@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2010-2017 Rephael Wenger
+  Copyright (C) 2010-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -211,6 +211,42 @@ namespace IJK {
       (tri_vert[0], tri_vert[1], tri_vert[2], tri_vert_list);
   }
 
+  /// Add triangle vertices to triangle vertex list.
+  /// - Version which includes flag_reverse_orient.
+  /// @param flag_reverse_orient If true, add quadrilateral vertices
+  ///   in reverse orientation.
+  template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename VTYPEB>
+  void add_triangle_vertices
+  (const VTYPE0 v0, const VTYPE1 v1, const VTYPE2 v2,
+   const bool flag_reverse_orient,
+   std::vector<VTYPEB> & tri_vert_list)
+  {
+    if (flag_reverse_orient) {
+      add_triangle_vertices(v2, v1, v0, tri_vert_list);
+    }
+    else {
+      add_triangle_vertices(v0, v1, v2, tri_vert_list);
+    }
+  }
+
+
+  /// Add triangle vertices to triangle vertex list.
+  /// - Version with triangle vertices in array tri_vert.
+  /// - Version which includes flag_reverse_orient.
+  /// @param flag_reverse_orient If true, add quadrilateral vertices
+  ///   in reverse orientation.
+  template <typename VTYPEA, typename VTYPEB>
+  void add_triangle_vertices
+  (const VTYPEA tri_vert[],
+   const bool flag_reverse_orient,
+   std::vector<VTYPEB> & tri_vert_list)
+  {
+    add_triangle_vertices
+      (tri_vert[0], tri_vert[1], tri_vert[2], flag_reverse_orient, 
+       tri_vert_list);
+  }
+
   /// Add quadrilateral vertices to quadrilateral vertex list.
   template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
             typename VTYPE3, typename VTYPEB>
@@ -250,7 +286,7 @@ namespace IJK {
   }
 
   /// Add quadrilateral vertices to quadrilateral vertex list.
-  /// - Version with triangle vertices in array tri_vert.
+  /// - Version with quad vertices in array quad_vert.
   template <typename VTYPEA, typename VTYPEB>
   void add_quad_vertices
   (const VTYPEA quad_vert[],
@@ -259,6 +295,24 @@ namespace IJK {
     add_quad_vertices
       (quad_vert[0], quad_vert[1], quad_vert[2], quad_vert[3], quad_vert_list);
   }
+
+
+  /// Add quadrilateral vertices to quadrilateral vertex list.
+  /// - Version with triangle vertices in array tri_vert.
+  /// - Version which includes flag_reverse_orient.
+  /// @param flag_reverse_orient If true, add quadrilateral vertices
+  ///   in reverse orientation.
+  template <typename VTYPEA, typename VTYPEB>
+  void add_quad_vertices
+  (const VTYPEA quad_vert[],
+   const bool flag_reverse_orient,
+   std::vector<VTYPEB> & quad_vert_list)
+  {
+    add_quad_vertices
+      (quad_vert[0], quad_vert[1], quad_vert[2], quad_vert[3], 
+       flag_reverse_orient, quad_vert_list);
+  }
+
 
   /// Add pentagon vertices to pentagon vertex list.
   template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
@@ -298,6 +352,22 @@ namespace IJK {
     else {
       add_pentagon_vertices(v0, v1, v2, v3, v4, pentagon_vert_list);
     }
+  }
+
+  /// Add pentagon vertices to pentagon vertex list.
+  /// - Version which includes flag_reverse_orient.
+  /// - Version with pentagon vertices in array pentagon_vert.
+  /// @param flag_reverse_orient If true, add pentagon vertices
+  ///   in reverse orientation.
+  template <typename VTYPE, typename VTYPEB>
+  void add_pentagon_vertices
+  (const VTYPE pentagon_vert[],
+   const bool flag_reverse_orient, std::vector<VTYPEB> & pentagon_vert_list)
+  {
+    add_pentagon_vertices
+      (pentagon_vert[0], pentagon_vert[1], pentagon_vert[2],
+       pentagon_vert[3], pentagon_vert[4], flag_reverse_orient,
+       pentagon_vert_list);
   }
 
   ///@}

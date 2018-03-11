@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2009-2017 Rephael Wenger
+  Copyright (C) 2009-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -2380,6 +2380,34 @@ namespace IJK {
   }
 
 
+  /// Compute min/max of the eight Jacobian matrix determinants 
+  ///   at the eight vertices of a hexahedron.
+  /// - Version which does not return vertices 
+  ///     with min/max Jacobian determinants.
+  /// @pre cube.Dimension() = 3. 
+  template <typename VTYPE0, typename VTYPE1, typename VTYPE2,
+            typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE0, typename DET_TYPE1>
+  void compute_min_max_hex_vert_Jacobian_determinant_3D
+  (const VTYPE0 hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE0 & min_Jacobian_determinant,
+   DET_TYPE1 & max_Jacobian_determinant)
+  {
+    VTYPE0 vert_with_min_Jacobian_determinant;
+    VTYPE0 vert_with_max_Jacobian_determinant;
+
+    compute_min_max_hex_vert_Jacobian_determinant_3D
+      (hex_vert, orientation, vertex_coord, cube, 
+       min_Jacobian_determinant, max_Jacobian_determinant,
+       vert_with_min_Jacobian_determinant, 
+       vert_with_max_Jacobian_determinant);
+  }
+
+
   /// Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
   /// - Version which returns all nine determinants.
   /// @pre cube.Dimension() = 3. 
@@ -2422,6 +2450,31 @@ namespace IJK {
       if (det > max_Jacobian_determinant) { max_Jacobian_determinant = det; }
     }
 
+  }
+
+
+  /// Compute the eight Jacobian matrix determinants of the eight 
+  ///   hexahedron vertices.
+  /// @pre cube.Dimension() = 3. 
+  /// @param[out] Jacobian_determinant[] 
+  ///   - Jacobian_determinant[i] is the Jacobian determinant at corner i.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, 
+            typename DET_TYPE>
+  void compute_hex_vert_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   DET_TYPE Jacobian_determinant[8])
+  {
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    for (NTYPE i0 = 0; i0 < cube.NumVertices(); i0++) {
+      compute_hexahedron_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, 
+         Jacobian_determinant[i0]);
+    }
   }
 
 
@@ -2754,6 +2807,36 @@ namespace IJK {
       }
     }
   }
+
+  /// Compute the eight normalized Jacobian matrix determinants of the eight 
+  ///   hexahedron vertices.
+  /// @pre cube.Dimension() = 3. 
+  /// @param[out] Jacobian_determinant[].
+  ///   - Jacobian_determinant[i] is the normalized Jacobian determinant 
+  ///       at corner i.
+  /// @param[out] flag_zero[].
+  ///   - flag_zero[i] is true if corner i is incident on a zero length edge.
+  template <typename VTYPE, typename ORIENT_TYPE,
+            typename CTYPE, typename CUBE_TYPE, typename MTYPE,
+            typename DET_TYPE>
+  void compute_hex_vert_normalized_Jacobian_determinant_3D
+  (const VTYPE hex_vert[],
+   const ORIENT_TYPE orientation,
+   const CTYPE * vertex_coord,
+   const CUBE_TYPE & cube,
+   const MTYPE max_small_magnitude,
+   DET_TYPE Jacobian_determinant[8],
+   bool flag_zero[8])
+  {
+    typedef typename CUBE_TYPE::NUMBER_TYPE NTYPE;
+
+    for (NTYPE i0 = 0; i0 < cube.NumVertices(); i0++) {
+      compute_hexahedron_normalized_Jacobian_determinant_3D
+        (hex_vert, orientation, vertex_coord, cube, i0, max_small_magnitude,
+         Jacobian_determinant[i0], flag_zero[i0]);
+    }
+  }
+
 
   ///@}
 
