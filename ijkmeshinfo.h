@@ -3,7 +3,7 @@
 
 /*
   IJK: Isosurface Jeneration Code
-  Copyright (C) 2010-2017 Rephael Wenger
+  Copyright (C) 2010-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -55,7 +55,7 @@ namespace IJKMESHINFO {
   typedef IJK::BOX<COORD_TYPE> BOUNDING_BOX;
   typedef int NUM_TYPE;
 
-  typedef typename IJK::VERTEX_POLY_INCIDENCE<int,int> 
+  typedef typename IJK::VERTEX_POLY_INCIDENCE_WITH_VLOC<int,int,int> 
   VERTEX_POLY_INCIDENCE_TYPE;
   typedef typename IJK::CUBE_FACE_INFO<int,int,int> CUBE_TYPE;
 

@@ -185,6 +185,11 @@ namespace IJK {
     VTYPE FacetVertex(const NTYPE ifacet, const NTYPE k) const
     { return(facet_vertex[ifacet*this->NumFacetVertices()+k]); };
 
+    /// Index of vertex diagonally opposite iv in facet.
+    NTYPE OppositeFacetVertex
+    (const NTYPE ifacet, const NTYPE k) const
+    { return(this->NumFacetVertices()-k-1); }
+
     /// Return pointer to array of incident edges.
     const VTYPE * IncidentEdge() const
     { return(incident_edge); }

@@ -2220,9 +2220,15 @@ namespace IJK {
 
     IJK::determinant_point_3D(v0coord, w0coord, w1coord, w2coord, 
                               Jacobian_determinant);
-    Jacobian_determinant = Jacobian_determinant * orient_factor[icorner0];
 
-    if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+    if (Jacobian_determinant == 0.0) {
+      // Set to +0.0.
+      Jacobian_determinant = 0.0;
+    }
+    else {
+      Jacobian_determinant = Jacobian_determinant * orient_factor[icorner0];
+      if (orientation < 0) { Jacobian_determinant = -Jacobian_determinant; }
+    }
   }
 
 

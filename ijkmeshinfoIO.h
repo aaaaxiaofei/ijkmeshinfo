@@ -378,8 +378,12 @@ namespace IJKMESHINFO {
   ///   at the hex vertices (not at hex centers.)
   void output_min_max_hex_vert_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
-   const IO_INFO & io_info, const bool flag_internal,
+   const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, 
+   const bool flag_internal_poly,
+   const bool flag_internal_vertex,
    COORD_TYPE & min_Jacobian_determinant, 
    COORD_TYPE & max_Jacobian_determinant);
 
@@ -424,10 +428,13 @@ namespace IJKMESHINFO {
 
   /// Output hex mesh vertices with min Jacobian determinants.
   void output_hex_mesh_vertices_with_min_Jacobian_determinants
-  (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
-   const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
    const COORD_TYPE * vertex_coord,
-   const IO_INFO & io_info, const bool flag_internal);
+   const IO_INFO & io_info, 
+   const bool flag_internal_poly,
+   const bool flag_internal_vertex);
 
   /// Output hex mesh vertices with min normalized Jacobian determinants.
   void output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants

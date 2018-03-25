@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2010-2017 Rephael Wenger
+  Copyright (C) 2010-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -228,6 +228,31 @@ namespace IJK {
 
 
   // *****************************************************************
+  // Class VERTEX_POLY_INCIDENCE_ELEMENT_WITH_VLOC
+  // *****************************************************************
+
+  /// VERTEX_POLY_INCIDENCE_ELEMENT with vertex location
+  ///   in list of vertices incident on polytope poly_index.
+  template <typename PTYPE, typename LTYPE>
+  class VERTEX_POLY_INCIDENCE_ELEMENT_WITH_VLOC:
+    public VERTEX_POLY_INCIDENCE_ELEMENT<PTYPE> {
+
+  protected:
+
+    /// Location of vertex in polytope ipoly list of vertices.
+    LTYPE vertex_location;
+
+  public:
+    typedef LTYPE VERTEX_LOCATION_TYPE;
+
+  public:
+    LTYPE VertexLocation() const { return(vertex_location); };
+    void SetVertexLocation(const LTYPE iloc)
+    { vertex_location = iloc; }
+  };
+
+
+  // *****************************************************************
   // Class VERTEX_POLY_INCIDENCE_BASE and VERTEX_POLY_INCIDENCE.
   // *****************************************************************
 
@@ -340,9 +365,61 @@ namespace IJK {
 
 
   // *****************************************************************
-  // Class VERTEX_ADJACENCY_LIST_ELEMENT
+  // Class VERTEX_POLY_INCIDENCE_WITH_VLOC_BASE 
+  //   and VERTEX_POLY_INCIDENCE_WITH_VLOC
   // *****************************************************************
 
+  /// \brief List of polytopes incident on each vertex. Base class.
+  /// \brief - Includes location of each vertex in each polytope vertex list.
+  /// @tparam ETYPE List element type.
+  ///    Usually derived from VERTEX_POLY_INCIDENCE_WITH_VLOC_ELEMENT.
+  ///    ETYPE must have member function SetVertexLocation()
+  /// @tparam NTYPE Number type.
+  template <typename ETYPE, typename NTYPE>
+  class VERTEX_POLY_INCIDENCE_WITH_VLOC_BASE:
+    public VERTEX_POLY_INCIDENCE_BASE<ETYPE,NTYPE> {
+
+  protected:
+
+    typedef typename ETYPE::POLY_INDEX_TYPE PTYPE;
+    typedef typename ETYPE::VERTEX_LOCATION_TYPE LTYPE;
+
+  public:
+    /// Return location of vertex iv in vertex list of poly PolyIndex(iv,j).
+    template <typename VTYPE, typename NTYPE2>
+    LTYPE VertexLocInPolyVertexList(const VTYPE iv, const NTYPE2 j) const
+    { return(this->Element(iv,j).VertexLocation()); }
+
+    /// Set vertex poly incidence from polymesh.
+    /// - Redefine to also set location of each vertex
+    ///   in each polytope vertex list.
+    template <typename VTYPE2, typename NTYPE2>
+    void Set(const POLYMESH<VTYPE2,NTYPE2> & polymesh);
+  };
+
+
+  /// \brief List of polytopes incident on each vertex.
+  /// \brief - Includes location of each vertex in each polytope vertex list.
+  /// @tparam PTYPE Polytope index type.
+  /// @tparam NTYPE Number type.
+  template <typename PTYPE, typename LTYPE, typename NTYPE>
+  class VERTEX_POLY_INCIDENCE_WITH_VLOC:
+    public VERTEX_POLY_INCIDENCE_WITH_VLOC_BASE
+  <VERTEX_POLY_INCIDENCE_ELEMENT_WITH_VLOC<PTYPE,LTYPE>,NTYPE> {
+
+  public:
+    VERTEX_POLY_INCIDENCE_WITH_VLOC() {};
+
+    template <typename VTYPE, typename NTYPE2>
+    VERTEX_POLY_INCIDENCE_WITH_VLOC
+    (const POLYMESH<VTYPE,NTYPE2> & polymesh)
+    { this->Set(polymesh); }
+  };
+
+
+  // *****************************************************************
+  // Class VERTEX_ADJACENCY_LIST_ELEMENT
+  // *****************************************************************
 
   /// Base element of VERTEX_ADJACENCY_LIST_BASE
   template <typename VTYPE>
@@ -1085,6 +1162,58 @@ namespace IJK {
     num_vertices = 0;
     num_poly = 0;
     LIST_OF_LISTS<ETYPE,NTYPE>::Clear();
+  }
+
+
+  // *****************************************************************
+  // Class VERTEX_POLY_INCIDENCE_WITH_VLOC member functions
+  // *****************************************************************
+
+  template <typename ETYPE, typename NTYPE>
+  template <typename VTYPE2, typename NTYPE2>
+  void VERTEX_POLY_INCIDENCE_WITH_VLOC_BASE<ETYPE,NTYPE>::
+  Set(const POLYMESH<VTYPE2,NTYPE2> & polymesh)
+  {
+    std::vector<PTYPE> current_poly_index;
+    std::vector<PTYPE> last_poly;
+    IJK::PROCEDURE_ERROR error("VERTEX_POLY_INCIDENCE_WITH_VLOC_BASE::Set");
+
+    this->Clear();
+    this->AllocateLists(polymesh);
+
+    last_poly.resize(this->NumVertices());
+    current_poly_index.resize(this->NumVertices(), 0);
+    for (NTYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+      for (NTYPE i = 0; i < polymesh.NumPolyVert(ipoly); i++) {
+        const VTYPE2 iv = polymesh.Vertex(ipoly, i);
+
+        if (current_poly_index[iv] != 0) {
+          if (last_poly[iv] == ipoly) {
+            // Poly ipoly already inserted in list of poly incident on iv.
+            continue;
+          }
+        }
+
+        this->ElementRef(iv, current_poly_index[iv]).SetPolyIndex(ipoly);
+        this->ElementRef(iv, current_poly_index[iv]).SetVertexLocation(i);
+        current_poly_index[iv]++;
+        last_poly[iv] = ipoly;
+      }
+    }
+
+    // Check stored correct number of poly for each vertex.
+    for (NTYPE iv = 0; iv < this->NumVertices(); iv++) {
+      if (current_poly_index[iv] != this->ListLength(iv)) {
+        error.AddMessage
+          ("Programming error.  Incorrect storage of poly vertices.");
+        error.AddMessage
+          ("  num_incident_poly[", iv, "] = ", this->ListLength(iv), ".");
+        error.AddMessage
+          ("  Stored ", current_poly_index[iv], " incident poly.");
+        throw error;
+      }
+    }
+
   }
 
 

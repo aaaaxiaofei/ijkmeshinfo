@@ -148,6 +148,7 @@ bool oriented_manifold_flag = false;
 bool check_facet_intersections_flag = false;
 bool terse_flag = false;
 bool vlist_flag = false;
+bool vlist_min_flag = false;
 bool plist_flag = false;
 bool contains_vertex_flag = false;
 bool contains_edge_flag = false;
@@ -207,7 +208,9 @@ void write_table_gplt(ofstream & ofile, const TABLE_TYPE & table);
 
 
 // output info routines
-void output_general_info(const POLYMESH_TYPE & polymesh);
+void output_general_info
+(const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence);
 void output_vertex_info(const int dimension, const int vertex_index);
 void output_simplex_info(const int dimension, const int simplex_index);
 void output_manifold_info();
@@ -255,11 +258,13 @@ void output_poly_with_min_max_Jacobian_determinants
  const bool flag_internal_poly);
 void output_min_max_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert,
  COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant);
 void output_min_max_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert);
 void output_min_max_normalized_Jacobian_determinants
@@ -298,7 +303,9 @@ void check_input();
 typedef enum
   {POLYFILE_PARAM, MESH_DIM_PARAM, REVERSE_ORIENT_PARAM,
    VERTEX_PARAM, SIMPLEX_PARAM, POLY_PARAM,
-   VLIST_PARAM, PLIST_PARAM, CONTAINSV_PARAM, CONTAINSE_PARAM,
+   VLIST_PARAM, VLIST_MIN_PARAM,
+   PLIST_PARAM, 
+   CONTAINSV_PARAM, CONTAINSE_PARAM,
    MANIFOLD_PARAM, ORIENTED_MANIFOLD_PARAM,
    CHECK_FACET_INTERSECTIONS_PARAM,
    SELFI_PARAM, SELFI_NO_GRID_PARAM, GRID_LENGTH_PARAM,
@@ -321,7 +328,9 @@ typedef enum
 const char * parameter_string[] = 
   {"-polyfile", "-mesh_dim", "-reverse_orient",
    "-vertex", "-simplex", "-poly",
-   "-vlist", "-plist", "-containsv", "-containse",
+   "-vlist", "-vlist_min", 
+   "-plist",
+   "-containsv", "-containse",
    "-manifold", "-oriented_manifold",
    "-check_facetI",
    "-selfI", "-selfI_no_grid", "-grid_length",
@@ -366,7 +375,8 @@ int main(int argc, char **argv)
 
     if (flag_internal_poly || flag_internal_vert) { compute_facet_info(); }
 
-    if (io_info.flag_general_info) { output_general_info(polymesh); }
+    if (io_info.flag_general_info) 
+      { output_general_info(polymesh, vertex_info); }
     else if (io_info.flag_output_min_angle || io_info.flag_output_max_angle) {
       output_min_max_angle
         (mesh_data, polymesh, vertex_coord, io_info, flag_internal_poly); 
@@ -374,9 +384,10 @@ int main(int argc, char **argv)
     else if (io_info.flag_output_min_Jacobian_determinant ||
              io_info.flag_output_max_Jacobian_determinant ||
              io_info.flag_output_min_normalized_Jacobian_determinant ||
-             io_info.flag_output_max_normalized_Jacobian_determinant) {
+             io_info.flag_output_max_normalized_Jacobian_determinant ||
+             vlist_min_flag) {
       output_min_max_Jacobian_determinants
-        (mesh_data, polymesh, vertex_coord, io_info, 
+        (mesh_data, polymesh, vertex_info, vertex_coord, io_info, 
          flag_internal_poly, flag_internal_vert); 
       output_min_max_normalized_Jacobian_determinants
         (mesh_data, polymesh, vertex_coord, io_info, 
@@ -385,7 +396,7 @@ int main(int argc, char **argv)
     else if (io_info.flag_output_min_Jacobian_determinant ||
              io_info.flag_output_max_Jacobian_determinant) {
       output_min_max_Jacobian_determinants
-        (mesh_data, polymesh, vertex_coord, io_info, 
+        (mesh_data, polymesh, vertex_info, vertex_coord, io_info, 
          flag_internal_poly, flag_internal_vert); 
     }
 
@@ -503,7 +514,7 @@ int main(int argc, char **argv)
         if (io_info.flag_output_min_Jacobian_determinant) {
           output_hex_mesh_vertices_with_min_Jacobian_determinants
             (mesh_data, polymesh, vertex_info, vertex_coord,
-             io_info, flag_internal_poly);
+             io_info, flag_internal_poly, flag_internal_vert);
         }
         else if (io_info.flag_output_min_normalized_Jacobian_determinant) {
           output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
@@ -514,6 +525,25 @@ int main(int argc, char **argv)
       else {
         // Output all vertices.
         output_vertex_list();
+      }
+    }
+
+    if (vlist_min_flag) {
+
+      if (flag_cube_file && mesh_data.mesh_dimension == DIM3) {
+        output_hex_mesh_vertices_with_min_Jacobian_determinants
+          (mesh_data, polymesh, vertex_info, vertex_coord,
+           io_info, flag_internal_poly, flag_internal_vert);
+
+        if (!flag_internal_vert) {
+          output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
+            (mesh_data, polymesh, vertex_info, vertex_coord,
+             io_info, flag_internal_poly);
+        }
+      }
+      else {
+        cerr << "Error. Option -vlist_min only implemented for hexahedral mesh."
+             << endl;
       }
     }
 
@@ -810,7 +840,9 @@ int is_num_poly_vert_constant(const std::vector<int> & num_poly_vert)
 // OUTPUT INFO ROUTINES
 // **************************************************
 
-void output_general_info(const POLYMESH_TYPE & polymesh)
+void output_general_info
+(const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence)
 {
   const int dimension = mesh_data.dimension;
   const int mesh_dimension = mesh_data.mesh_dimension;
@@ -888,14 +920,17 @@ void output_general_info(const POLYMESH_TYPE & polymesh)
   io_info.flag_output_min_Jacobian_determinant = true;
   io_info.flag_output_max_Jacobian_determinant = true;
   output_min_max_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info, false, false);
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     io_info, false, false);
   if (flag_internal_poly) {
     output_min_max_Jacobian_determinants
-      (mesh_data, polymesh, vertex_coord, io_info, true, false);
+      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+       io_info, true, false);
   }
   if (flag_internal_vert) {
     output_min_max_Jacobian_determinants
-      (mesh_data, polymesh, vertex_coord, io_info, false, true);
+      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+       io_info, false, true);
   }
 
   io_info.flag_output_min_normalized_Jacobian_determinant = true;
@@ -1214,6 +1249,7 @@ void output_min_max_polygon_edge_lengths
 
 void output_min_max_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert, 
  COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
@@ -1224,7 +1260,6 @@ void output_min_max_Jacobian_determinants
   if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
 
     if (flag_internal_poly || !flag_internal_vert) {
-
       if (io_info.flag_pJacobian.IsSet()) {
         if (io_info.flag_pJacobian.Value()) {
           output_min_max_hexahedra_Jacobian_determinants
@@ -1236,36 +1271,40 @@ void output_min_max_Jacobian_determinants
       if (io_info.flag_vJacobian.IsSet()) {
         if (io_info.flag_vJacobian.Value()) {
           output_min_max_hex_vert_Jacobian_determinants
-            (mesh_data, polymesh, vertex_coord, io_info, 
-             flag_internal_poly,
+            (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+             io_info, flag_internal_poly, flag_internal_vert,
              min_Jacobian_determinant, max_Jacobian_determinant);
         }
       }
     }
     else if (flag_internal_vert) {
-      output_min_max_internal_hex_vert_Jacobian_determinants
-        (mesh_data, polymesh, vertex_coord, io_info,
+      output_min_max_hex_vert_Jacobian_determinants
+        (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+         io_info, flag_internal_poly, flag_internal_vert,
          min_Jacobian_determinant, max_Jacobian_determinant);
     }
-
   }
 
 }
 
+
 void output_min_max_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert)
 {
   COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
 
   output_min_max_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info,
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, io_info,
      flag_internal_poly, flag_internal_vert,
      min_Jacobian_determinant, max_Jacobian_determinant);
 }
 
 
+
+// *** OLD VERSION ***
 void output_min_max_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
@@ -2275,37 +2314,6 @@ void write_table_gplt(ofstream & ofile, const TABLE_TYPE & table)
     table.WriteColumnData(ofile, "  ", width);
   }
 }
-
-
-/* OBSOLETE
-void write_polygon_angle_tables
-(const char * input_filename, 
- const bool flag_plot_min_polygon_angles,
- const bool flag_plot_max_polygon_angles,
- ANGLE_TABLE & angle_table)
-{
-  string filename, output_filename;
-
-  get_filename_remove_suffix(input_filename, "off", filename);
-
-  if (flag_plot_min_polygon_angles) {
-    angle_table.HideAllExceptAngleColumn();
-    angle_table.min_polygon_angle_freq.Show();
-
-    output_filename = filename + ".min_poly_angle_freq.gplt";
-    write_table_gplt(output_filename, angle_table);
-  }
-
-  if (flag_plot_max_polygon_angles) {
-    angle_table.HideAllExceptAngleColumn();
-    angle_table.max_polygon_angle_freq.Show();
-
-    output_filename = filename + ".max_poly_angle_freq.gplt";
-    write_table_gplt(output_filename, angle_table);
-  }
-
-}
-*/
 
 
 // **************************************************
@@ -4094,6 +4102,12 @@ void parse_command_line(int argc, char **argv)
         io_info.flag_general_info = false;
         break;
 
+      case VLIST_MIN_PARAM:
+        vlist_min_flag = true;
+        io_info.flag_output_min_Jacobian_determinant = true;
+        io_info.flag_general_info = false;
+        break;
+
       case PLIST_PARAM:
         plist_flag = true;
         io_info.flag_general_info = false;
@@ -4335,7 +4349,7 @@ void parse_command_line(int argc, char **argv)
 
   if (!io_info.flag_pJacobian.IsSet() && !io_info.flag_vJacobian.IsSet()) {
 
-    if (vlist_flag) { io_info.flag_vJacobian.Set(true); }
+    if (vlist_flag || vlist_min_flag) { io_info.flag_vJacobian.Set(true); }
     else { io_info.flag_pJacobian.Set(true); }
   }
 
