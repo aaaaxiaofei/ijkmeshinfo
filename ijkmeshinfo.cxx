@@ -239,7 +239,8 @@ void output_min_max_angle
 void output_min_max_angle
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
- const IO_INFO & io_info, const bool flag_internal_poly, const int num_poly_edges);
+ const IO_INFO & io_info, const bool flag_internal_poly, 
+ const int num_poly_edges);
 void output_min_max_polygon_edge_lengths
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord, const IO_INFO & io_info,
@@ -269,11 +270,13 @@ void output_min_max_Jacobian_determinants
  const bool flag_internal_poly, const bool flag_internal_vert);
 void output_min_max_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert,
  COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant);
 void output_min_max_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert);
 void write_non_manifold_edges();
@@ -390,7 +393,7 @@ int main(int argc, char **argv)
         (mesh_data, polymesh, vertex_info, vertex_coord, io_info, 
          flag_internal_poly, flag_internal_vert); 
       output_min_max_normalized_Jacobian_determinants
-        (mesh_data, polymesh, vertex_coord, io_info, 
+        (mesh_data, polymesh, vertex_info, vertex_coord, io_info, 
          flag_internal_poly, flag_internal_vert); 
     }
     else if (io_info.flag_output_min_Jacobian_determinant ||
@@ -516,10 +519,11 @@ int main(int argc, char **argv)
             (mesh_data, polymesh, vertex_info, vertex_coord,
              io_info, flag_internal_poly, flag_internal_vert);
         }
-        else if (io_info.flag_output_min_normalized_Jacobian_determinant) {
+
+        if (io_info.flag_output_min_normalized_Jacobian_determinant) {
           output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
             (mesh_data, polymesh, vertex_info, vertex_coord,
-             io_info, flag_internal_poly);
+             io_info, flag_internal_poly, flag_internal_vert);
         }
       }
       else {
@@ -534,12 +538,9 @@ int main(int argc, char **argv)
         output_hex_mesh_vertices_with_min_Jacobian_determinants
           (mesh_data, polymesh, vertex_info, vertex_coord,
            io_info, flag_internal_poly, flag_internal_vert);
-
-        if (!flag_internal_vert) {
-          output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
-            (mesh_data, polymesh, vertex_info, vertex_coord,
-             io_info, flag_internal_poly);
-        }
+        output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
+          (mesh_data, polymesh, vertex_info, vertex_coord,
+           io_info, flag_internal_poly, flag_internal_vert);
       }
       else {
         cerr << "Error. Option -vlist_min only implemented for hexahedral mesh."
@@ -936,14 +937,17 @@ void output_general_info
   io_info.flag_output_min_normalized_Jacobian_determinant = true;
   io_info.flag_output_max_normalized_Jacobian_determinant = true;
   output_min_max_normalized_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info, false, false);
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     io_info, false, false);
   if (flag_internal_poly) {
     output_min_max_normalized_Jacobian_determinants
-      (mesh_data, polymesh, vertex_coord, io_info, true, false);
+      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+       io_info, true, false);
   }
   if (flag_internal_vert) {
     output_min_max_normalized_Jacobian_determinants
-      (mesh_data, polymesh, vertex_coord, io_info, false, true);
+      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+       io_info, false, true);
   }
 
   cout << "Bounding box: (";
@@ -1303,12 +1307,11 @@ void output_min_max_Jacobian_determinants
 }
 
 
-
-// *** OLD VERSION ***
 void output_min_max_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
- const bool flag_internal_poly, const bool flag_internal_vert,
+ const bool flag_internal_poly, const bool flag_internal_vert, 
  COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
 {
   const int dimension = mesh_data.dimension;
@@ -1317,44 +1320,44 @@ void output_min_max_normalized_Jacobian_determinants
   if (flag_cube_file && mesh_dimension == DIM3 && dimension == DIM3) {
 
     if (flag_internal_poly || !flag_internal_vert) {
-
       if (io_info.flag_pJacobian.IsSet()) {
         if (io_info.flag_pJacobian.Value()) {
           output_min_max_hexahedra_normalized_Jacobian_determinants
-            (mesh_data, polymesh, vertex_coord, io_info,
-             flag_internal_poly, min_Jacobian_determinant, max_Jacobian_determinant);
+            (mesh_data, polymesh, vertex_coord, io_info, flag_internal_poly, 
+             min_Jacobian_determinant, max_Jacobian_determinant);
         }
       }
 
       if (io_info.flag_vJacobian.IsSet()) {
         if (io_info.flag_vJacobian.Value()) {
           output_min_max_hex_vert_normalized_Jacobian_determinants
-            (mesh_data, polymesh, vertex_coord, io_info,
-             flag_internal_poly,
+            (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+             io_info, flag_internal_poly, flag_internal_vert,
              min_Jacobian_determinant, max_Jacobian_determinant);
         }
       }
-
     }
     else if (flag_internal_vert) {
-      output_min_max_internal_hex_vert_normalized_Jacobian_determinants
-        (mesh_data, polymesh, vertex_coord, io_info,
+      output_min_max_hex_vert_normalized_Jacobian_determinants
+        (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+         io_info, flag_internal_poly, flag_internal_vert,
          min_Jacobian_determinant, max_Jacobian_determinant);
     }
-
   }
+
 }
 
 
 void output_min_max_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,  const IO_INFO & io_info,
  const bool flag_internal_poly, const bool flag_internal_vert)
 {
   COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
 
   output_min_max_normalized_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info, 
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, io_info,
      flag_internal_poly, flag_internal_vert,
      min_Jacobian_determinant, max_Jacobian_determinant);
 }
@@ -4263,6 +4266,7 @@ void parse_command_line(int argc, char **argv)
 
       case OUT_MIN_JACOBIAN_DET_PARAM:
         io_info.flag_output_min_Jacobian_determinant = true;
+        io_info.flag_output_min_normalized_Jacobian_determinant = true;
         io_info.flag_general_info = false;
         break;
 
