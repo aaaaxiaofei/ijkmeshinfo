@@ -82,8 +82,16 @@ namespace IJKMESHINFO {
     /// If true, output min of the normalized Jacobian determinants.
     bool flag_output_min_normalized_Jacobian_determinant;
 
-    /// If true, output max of the normalized_Jacobian determinants.
+    /// If true, output max of the normalized Jacobian determinants.
     bool flag_output_max_normalized_Jacobian_determinant;
+
+    /// If true, output min of the shape metrics based 
+    ///   on the Jacobian matrices.
+    bool flag_output_min_Jacobian_shape;
+
+    /// If true, output max of the shape metrics based 
+    ///   on the Jacobian matrices.
+    bool flag_output_max_Jacobian_shape;
 
     /// If true, output all polytopes with minimum and maximum values.
     bool flag_output_all_min_max;
@@ -426,6 +434,39 @@ namespace IJKMESHINFO {
   void output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
   (const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_info,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, 
+   const bool flag_internal_poly,
+   const bool flag_internal_vertex);
+
+
+  // **************************************************
+  // OUTPUT SHAPE METRIC BASED ON JACOBIAN MATRICES
+  // **************************************************
+
+  void output_min_max_hexahedra_Jacobian_shape
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, const bool flag_internal,
+   COORD_TYPE & min_Jacobian_shape,
+   COORD_TYPE & max_Jacobian_shape);
+
+  void output_min_max_hex_vert_Jacobian_shape
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
+   const COORD_TYPE * vertex_coord,
+   const IO_INFO & io_info, 
+   const bool flag_internal_poly,
+   const bool flag_internal_vertex,
+   COORD_TYPE & min_Jacobian_shape, 
+   COORD_TYPE & max_Jacobian_shape);
+
+  /// Output hex mesh vertices with min Jacobian shape metrics.
+  void output_hex_mesh_vertices_with_min_Jacobian_shape
+  (const MESH_DATA & mesh_data,
+   const POLYMESH_TYPE & polymesh, 
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
    const COORD_TYPE * vertex_coord,
    const IO_INFO & io_info, 
    const bool flag_internal_poly,

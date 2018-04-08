@@ -975,8 +975,7 @@ void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_determinants
 
     const int kpoly = vertex_poly_incidence.IncidentPoly(iv0, k);
     const int kloc = vertex_poly_incidence.VertexLocInPolyVertexList(iv0, k);
-
-    IJK::compute_hexahedron_Jacobian_determinant_3D
+    IJK::compute_Jacobian_determinant_at_hex_vertex_3D
       (polymesh.VertexList(kpoly), mesh_data.orientation,
        vertex_coord, cube, kloc, Jacobian_determinant);
 
@@ -1052,52 +1051,6 @@ void IJKMESHINFO::compute_min_max_hexahedron_normalized_Jacobian_determinants
      num_Jacobian_determinants);
 }
 
-/*
-// Compute min/max normalized Jacobian matrix determinants of hexahedra.
-// - Version with input argument mesh_data.
-// - Version which returns vertices with min/max Jacobian determinants.
-void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
- const bool flag_internal,
- COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
- int & poly_with_min_Jacobian_determinant, 
- int & poly_with_max_Jacobian_determinant,
- int & vert_with_min_Jacobian_determinant, 
- int & vert_with_max_Jacobian_determinant)
-{
-  compute_min_max_plist_values_data
-    (mesh_data, polymesh, vertex_coord, flag_internal,
-     0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
-     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
-     vert_with_min_Jacobian_determinant, vert_with_max_Jacobian_determinant,
-     compute_min_max_hex_vert_normalized_Jacobian_determinants);
-}
-
-// Compute min/max of the normalized Jacobian matrix determinants 
-//   of hexahedra vertices.
-// Ignore hexahedra centers.
-// - Version with input argument mesh_data.
-void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
- const bool flag_internal,
- COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
- int & poly_with_min_Jacobian_determinant, 
- int & poly_with_max_Jacobian_determinant)
-{
-  int vert_with_min_Jacobian_determinant;
-  int vert_with_max_Jacobian_determinant;
-
-  compute_min_max_plist_values_data
-    (mesh_data, polymesh, vertex_coord, flag_internal,
-     0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
-     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
-     vert_with_min_Jacobian_determinant, vert_with_max_Jacobian_determinant,
-     compute_min_max_hex_vert_normalized_Jacobian_determinants);
-}
-*/
-
 
 // Compute min/max of the eight normalized Jacobian matrix determinants 
 //   at the eight vertices of a hexahedron.
@@ -1125,7 +1078,6 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 }
 
 
-// *** NEW ***
 // Compute min/max normalized Jacobian matrix determinants 
 //   of hexahedra vertices.
 // - Version which returns vertices with min/max Jacobian determinants.
@@ -1153,7 +1105,6 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 }
 
 
-// *** NEW ***
 // Compute min/max of the normalized Jacobian matrix determinants 
 //   of hexahedra vertices.
 // - Version which does not return vertices or polytopes with min/max values.
@@ -1181,7 +1132,6 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 }
 
 
-// *** NEW ***
 // Compute min/max normalized Jacobian matrix determinants of a vertex 
 //   in a hexahedral mesh.
 // - Version with input vertex-poly incidence data structure.
@@ -1224,8 +1174,7 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 
     const int kpoly = vertex_poly_incidence.IncidentPoly(iv0, k);
     const int kloc = vertex_poly_incidence.VertexLocInPolyVertexList(iv0, k);
-
-    IJK::compute_hexahedron_normalized_Jacobian_determinant_3D
+    IJK::compute_normalized_Jacobian_determinant_at_hex_vertex_3D
       (polymesh.VertexList(kpoly), mesh_data.orientation,
        vertex_coord, cube, kloc, max_small_magnitude,
        Jacobian_determinant, flag_zero);
@@ -1262,115 +1211,198 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 }
 
 
-// Compute min/max of the normalized Jacobian matrix determinants 
-//   at the internal vertices in a hex mesh.
-// @pre dimension = 3. 
-void IJKMESHINFO::compute_min_max_internal_hex_vert_normalized_Jacobian_determinants
+// **************************************************
+// COMPUTE SHAPE METRIC BASED ON JACOBIAN MATRICES
+// **************************************************
+
+// Compute min/max hexahedra shape metric based on Jacobian matrices.
+// - Version with input argument mesh_data.
+void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_shape
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
- COORD_TYPE & min_Jacobian_determinant,
- COORD_TYPE & max_Jacobian_determinant,
- int & poly_with_min_Jacobian_determinant, 
- int & poly_with_max_Jacobian_determinant,
- VERTEX_INDEX & vert_with_min_Jacobian_determinant,
- VERTEX_INDEX & vert_with_max_Jacobian_determinant)
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape,
+ int & poly_with_min_Jacobian_shape, 
+ int & poly_with_max_Jacobian_shape)
 {
-  compute_min_max_plist_values_dataB
-    (mesh_data, polymesh, vertex_coord, 
-     0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
-     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
-     vert_with_min_Jacobian_determinant, vert_with_max_Jacobian_determinant,
-     compute_min_max_internal_hex_vert_normalized_Jacobian_determinants_ihex);
+ compute_min_max_plist_values
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     0, 0, min_Jacobian_shape, max_Jacobian_shape,
+     poly_with_min_Jacobian_shape, poly_with_max_Jacobian_shape,
+     compute_min_max_hexahedron_Jacobian_shape);
 }
 
 
-// Compute min/max of the normalized Jacobian matrix determinants 
-//   at the internal mesh in a hex mesh.
+// Compute min/max hexahedron shape metric based on Jacobian matrices.
 // @pre dimension = 3. 
-void IJKMESHINFO::compute_min_max_internal_hex_vert_normalized_Jacobian_determinants
+void IJKMESHINFO::compute_min_max_hexahedron_Jacobian_shape
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh,
+ const VERTEX_INDEX hex_vert[], const int num_vert,
  const COORD_TYPE * vertex_coord,
- COORD_TYPE & min_Jacobian_determinant,
- COORD_TYPE & max_Jacobian_determinant,
- int & poly_with_min_Jacobian_determinant, 
- int & poly_with_max_Jacobian_determinant)
+ COORD_TYPE & min_Jacobian_shape,
+ COORD_TYPE & max_Jacobian_shape,
+ int & num_Jacobian_shapes)
 {
-  int vert_with_min_Jacobian_determinant;
-  int vert_with_max_Jacobian_determinant;
+  const static CUBE_TYPE cube(DIM3);
+  const COORD_TYPE max_small_magnitude(0.0);
 
-  compute_min_max_internal_hex_vert_normalized_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, 
-     min_Jacobian_determinant, max_Jacobian_determinant,
-     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
-     vert_with_min_Jacobian_determinant, vert_with_max_Jacobian_determinant);
+  IJK::compute_min_max_hexahedron_Jacobian_shape_3D
+    (hex_vert, vertex_coord, cube, max_small_magnitude,
+     min_Jacobian_shape, max_Jacobian_shape,
+     num_Jacobian_shapes);
 }
 
 
-// Compute min/max of the eight normalized Jacobian matrix determinants 
-//   at the vertices of hexahedron ihex which are internal to the mesh.
+// Compute min/max of the eight Jacobian shape metrics
+//   at the eight vertices of a hexahedron.
 // @pre dimension = 3. 
-void IJKMESHINFO::compute_min_max_internal_hex_vert_normalized_Jacobian_determinants_ihex
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_shape
+(const MESH_DATA & mesh_data,
+ const VERTEX_INDEX hex_vert[], const int num_vert,
+ const COORD_TYPE * vertex_coord,
+ COORD_TYPE & min_Jacobian_shape,
+ COORD_TYPE & max_Jacobian_shape,
+ VERTEX_INDEX & vert_with_min_Jacobian_shape,
+ VERTEX_INDEX & vert_with_max_Jacobian_shape,
+ int & num_Jacobian_shapes)
+{
+  const static CUBE_TYPE cube(DIM3);
+
+  const COORD_TYPE max_small_magnitude(0.0);
+
+  IJK::compute_min_max_hex_vert_Jacobian_shape_3D
+    (hex_vert, vertex_coord, cube, max_small_magnitude,
+     min_Jacobian_shape, max_Jacobian_shape,
+     vert_with_min_Jacobian_shape, 
+     vert_with_max_Jacobian_shape,
+     num_Jacobian_shapes);
+}
+
+
+// Compute min/max shape metrics based on Jacobian matrices at hex vertices.
+// - Version which returns vertices with min/max shape metric.
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_shape
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, 
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
+ const COORD_TYPE * vertex_coord,
+ const bool flag_internal_poly,
+ const bool flag_internal_vert,
+ COORD_TYPE & min_Jacobian_shape, 
+ COORD_TYPE & max_Jacobian_shape,
+ int & poly_with_min_Jacobian_shape, 
+ int & poly_with_max_Jacobian_shape,
+ int & vert_with_min_Jacobian_shape, 
+ int & vert_with_max_Jacobian_shape)
+{
+  compute_min_max_vlist_values
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     flag_internal_poly, flag_internal_vert,
+     0, 0, min_Jacobian_shape, max_Jacobian_shape,
+     poly_with_min_Jacobian_shape, poly_with_max_Jacobian_shape,
+     vert_with_min_Jacobian_shape, vert_with_max_Jacobian_shape,
+     compute_min_max_hex_vert_Jacobian_shape);
+}
+
+
+// Compute min/max shape metrics based on Jacobian matrices at hex vertices.
+// - Version which does not return vertices or polytopes with min/max values.
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_shape
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, 
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
+ const COORD_TYPE * vertex_coord,
+ const bool flag_internal_poly, const bool flag_internal_vert,
+ COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape)
+{
+  int poly_with_min_Jacobian_shape;
+  int poly_with_max_Jacobian_shape;
+  int vert_with_min_Jacobian_shape;
+  int vert_with_max_Jacobian_shape;
+
+  compute_min_max_hex_vert_Jacobian_shape
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     flag_internal_poly, flag_internal_vert,
+     min_Jacobian_shape, max_Jacobian_shape,
+     poly_with_min_Jacobian_shape,
+     poly_with_max_Jacobian_shape,
+     vert_with_min_Jacobian_shape,
+     vert_with_max_Jacobian_shape);
+}
+
+
+// Compute min/max shape metrics based on Jacobian matrices at hex vertices.
+// - Version with input vertex-poly incidence data structure.
+void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_shape
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
  const COORD_TYPE * vertex_coord,
- const int ihex,
- COORD_TYPE & min_Jacobian_determinant,
- COORD_TYPE & max_Jacobian_determinant,
- VERTEX_INDEX & vert_with_min_Jacobian_determinant,
- VERTEX_INDEX & vert_with_max_Jacobian_determinant,
- int & num_Jacobian_determinants)
+ const VERTEX_INDEX iv0,
+ const bool flag_internal_poly,
+ const bool flag_internal_vert,
+ COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape,
+ int & poly_with_min_Jacobian_shape, 
+ int & poly_with_max_Jacobian_shape,
+ int & num_Jacobian_shapes)
 {
   const static CUBE_TYPE cube(DIM3);
   const int NUM_CUBE_VERT = cube.NumVertices();
+  const int num_incident_poly = 
+    vertex_poly_incidence.NumIncidentPoly(iv0);
   const COORD_TYPE max_small_magnitude(0.0);
-  COORD_TYPE Jacobian_determinant[NUM_CUBE_VERT];
-  bool flag_zero[NUM_CUBE_VERT];
+  bool flag_zero;
+  COORD_TYPE Jacobian_shape;
 
   // Initialize
-  num_Jacobian_determinants = 0;
-  min_Jacobian_determinant = 0.0;
-  max_Jacobian_determinant = 0.0;
-  vert_with_min_Jacobian_determinant = 0;
-  vert_with_max_Jacobian_determinant = 0;
+  num_Jacobian_shapes = 0;
+  min_Jacobian_shape = 0.0;
+  max_Jacobian_shape = 0.0;
+  poly_with_min_Jacobian_shape = 0;
+  poly_with_max_Jacobian_shape = 0;
 
-  IJK::compute_hex_vert_normalized_Jacobian_determinant_3D
-    (polymesh.VertexList(ihex), mesh_data.orientation, vertex_coord, cube, 
-     max_small_magnitude, Jacobian_determinant, flag_zero);
+  if (flag_internal_vert) {
+    if (polymesh.vertex_data[iv0].OnBoundary()) { 
+      // Vertex iv0 is not internal.
+      return;
+    }
+  }
 
-  for (int j = 0; j < NUM_CUBE_VERT; j++) {
+  for (int k = 0; k < num_incident_poly; k++) {
 
-    if (flag_zero[j]) { 
-      // Corner j is incident on zero length edge.
-      // Normalized Jacobian at corner j is undefined.
-      // Skip corner j.
-      continue; 
+    const int kpoly = vertex_poly_incidence.IncidentPoly(iv0, k);
+    const int kloc = vertex_poly_incidence.VertexLocInPolyVertexList(iv0, k);
+    IJK::compute_Jacobian_shape_at_hex_vertex_3D
+      (polymesh.VertexList(kpoly), vertex_coord, cube, kloc, 
+       max_small_magnitude, Jacobian_shape, flag_zero);
+
+    if (flag_internal_poly) {
+      if (polymesh.poly_data[kpoly].ContainsBoundaryFacet()) 
+        { continue; } 
     }
 
-    const VERTEX_INDEX iv = polymesh.Vertex(ihex,j);
-    if (polymesh.vertex_data[iv].IsInternal()) {
-      if (num_Jacobian_determinants == 0) {
-        min_Jacobian_determinant = Jacobian_determinant[j];
-        max_Jacobian_determinant = Jacobian_determinant[j];
-        vert_with_min_Jacobian_determinant = iv;
-        vert_with_max_Jacobian_determinant = iv;
-      }
-      else {
+    if (flag_zero) { continue; }
 
-        if (Jacobian_determinant[j] < min_Jacobian_determinant) {
-          min_Jacobian_determinant = Jacobian_determinant[j];
-          vert_with_min_Jacobian_determinant = iv;
-        }
-
-        if (Jacobian_determinant[j] > max_Jacobian_determinant) {
-          max_Jacobian_determinant = Jacobian_determinant[j];
-          vert_with_max_Jacobian_determinant = iv;
-        }
-      }
-
-      num_Jacobian_determinants++;
+    if (num_Jacobian_shapes == 0) {
+      min_Jacobian_shape = Jacobian_shape;
+      max_Jacobian_shape = Jacobian_shape;
+      poly_with_min_Jacobian_shape = kpoly;
+      poly_with_max_Jacobian_shape = kpoly;
     }
+    else {
+
+      if (Jacobian_shape < min_Jacobian_shape) {
+        min_Jacobian_shape = Jacobian_shape;
+        poly_with_min_Jacobian_shape = kpoly;
+      }
+
+      if (Jacobian_shape > max_Jacobian_shape) {
+        max_Jacobian_shape = Jacobian_shape;
+        poly_with_max_Jacobian_shape = kpoly;
+      }
+    }
+
+    num_Jacobian_shapes++;
   }
 
 }
