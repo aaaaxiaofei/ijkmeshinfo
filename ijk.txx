@@ -454,6 +454,80 @@ namespace IJK {
     return(count_ge<X>(v, v.size()));
   }
 
+
+  // **************************************************
+  // MIN/MAX TEMPLATE FUNCTIONS
+  // **************************************************
+
+  /// Set min_val to minimum value with flag_skip{i} false.
+  /// - Set min_val to val0 if flag_skip0 is false and val0 <= val1.
+  /// - Set min_val to val0 if flag_skip0 is false and flag_skip1 is true.
+  /// - Set min_val to val1 if flag_skip1 is true and val0 > val1.
+  /// - Set min_val to val1 if flag_skip1 is true and flag_skip0 is false.
+  /// - Set flag_skip_all to true, if both flag_skip0 and flag_skip1 are true.
+  template <typename TYPE0, typename TYPE1, typename TYPE2, typename NTYPE>
+  void select_min
+  (const TYPE0 val0, const bool flag_skip0, 
+   const TYPE1 val1, const bool flag_skip1, 
+   TYPE2 & min_val, NTYPE & index_selected, bool & flag_skip_all)
+  {
+    if (flag_skip0) {
+      if (flag_skip1) {
+        flag_skip_all = true;
+        index_selected = 0;
+        min_val = val0;
+      }
+      else {
+        flag_skip_all = false;
+        index_selected = 1;
+        min_val = val1;
+      }
+    }
+    else {
+      flag_skip_all = false;
+
+      if (flag_skip1) {
+        index_selected = 0;
+        min_val = val0;
+      }
+      else if (val0 <= val1) {
+        index_selected = 0;
+        min_val = val0;
+      }
+      else {
+        index_selected = 1;
+        min_val = val1;
+      }
+    }
+  }
+
+
+  /// Set min_val to minimum value with flag_skip{i} false.
+  /// - Select from 3 values.
+  template <typename TYPE0, typename TYPE1, typename TYPE2, 
+            typename TYPE3, typename NTYPE>
+  void select_minIII
+  (const TYPE0 val0, const bool flag_skip0, 
+   const TYPE1 val1, const bool flag_skip1, 
+   const TYPE2 val2, const bool flag_skip2, 
+   TYPE3 & min_val, NTYPE & index_selected, bool & flag_skip_all)
+  {
+    TYPE3 min_val01;
+    bool flag_skip01;
+    NTYPE index01_selected, indexB_selected;
+
+    select_min(val0, flag_skip0, val1, flag_skip1,
+               min_val01, index01_selected, flag_skip01);
+    select_min(min_val01, flag_skip01, val2, flag_skip2,
+               min_val, indexB_selected, flag_skip_all);
+
+    if (indexB_selected == 0) 
+      { index_selected = index01_selected; }
+    else
+      { index_selected = 2; }
+  }
+
+
   // **************************************************
   // PUSH MULTIPLE ELEMENTS ON A C++ VECTOR
   // **************************************************

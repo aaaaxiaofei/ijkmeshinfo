@@ -425,6 +425,13 @@ namespace IJKMESHINFO {
       max_jacobian_freq("max-jacobian", NUM_ROWS)
         {};
 
+    JACOBIAN_TABLE(const NUM_TYPE num_rows):
+      IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE>(num_rows),
+      jacobian("jacobian", num_rows), 
+      min_jacobian_freq("min-jacobian", num_rows),
+      max_jacobian_freq("max-jacobian", num_rows)
+        {};
+
     // set routines
     void HideAllExceptJacobianColumn();
     void ComputeSum();
@@ -440,6 +447,41 @@ namespace IJKMESHINFO {
        const NUM_TYPE width,
        const double normalization_factor) const;
 
+  };
+
+
+  class JACOBIAN_SHAPE_TABLE:
+    public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
+
+  public:
+    static const NUM_TYPE NUM_ROWS = 21;
+
+    DATA_COLUMN<NUM_TYPE, COORD_TYPE> jshape;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> min_jshape_freq;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> max_jshape_freq;
+
+  public:
+    JACOBIAN_SHAPE_TABLE():
+      IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE>(NUM_ROWS),
+      jshape("jshape", NUM_ROWS), 
+      min_jshape_freq("min-jshape", NUM_ROWS),
+      max_jshape_freq("max-jshape", NUM_ROWS)
+        {};
+
+    // set routines
+    void HideAllExceptShapeColumn();
+    void ComputeSum();
+
+    // write routines
+    void WriteColumnLabels
+      (std::ostream & out, const std::string & separator) const;
+    void WriteColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width) const;
+    void WriteNormalizedColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width,
+       const double normalization_factor) const;
   };
 
 

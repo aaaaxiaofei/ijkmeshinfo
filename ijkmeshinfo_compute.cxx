@@ -847,7 +847,6 @@ void IJKMESHINFO::compute_min_max_hexahedron_edge_lengths
 // **************************************************
 
 // Compute min/max Jacobian matrix determinants of hexahedra.
-// - Version with input argument mesh_data.
 void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_determinants
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
@@ -863,6 +862,24 @@ void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_determinants
      compute_min_max_hexahedron_Jacobian_determinants);
 }
 
+
+// Compute min/max Jacobian matrix determinants of hexahedra.
+// - Version which does not return hexahedra containing min/max 
+//   Jacobian determinants.
+void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
+{
+  int poly_with_min_Jacobian_determinant;
+  int poly_with_max_Jacobian_determinant;
+
+  compute_min_max_hexahedra_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     min_Jacobian_determinant, max_Jacobian_determinant,
+     poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant);
+}
 
 // Compute min/max of the nine Jacobian matrix determinants of a hexahedron.
 // @pre dimension = 3. 
@@ -1014,7 +1031,6 @@ void IJKMESHINFO::compute_min_max_hex_vert_Jacobian_determinants
 // **************************************************
 
 // Compute min/max normalized Jacobian matrix determinants of hexahedra.
-// - Version with input argument mesh_data.
 void IJKMESHINFO::compute_min_max_hexahedra_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
@@ -1028,6 +1044,25 @@ void IJKMESHINFO::compute_min_max_hexahedra_normalized_Jacobian_determinants
      0, 0, min_Jacobian_determinant, max_Jacobian_determinant,
      poly_with_min_Jacobian_determinant, poly_with_max_Jacobian_determinant,
      compute_min_max_hexahedron_normalized_Jacobian_determinants);
+}
+
+
+// Compute min/max normalized Jacobian matrix determinants of hexahedra.
+// - Version which does not return hexahedra containing min/max 
+//   normalized Jacobian determinants.
+void IJKMESHINFO::compute_min_max_hexahedra_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant)
+{
+  int poly_with_min_value;
+  int poly_with_max_value;
+
+  compute_min_max_hexahedra_normalized_Jacobian_determinants
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     min_Jacobian_determinant, max_Jacobian_determinant,
+     poly_with_min_value, poly_with_max_value);
 }
 
 
@@ -1216,7 +1251,6 @@ void IJKMESHINFO::compute_min_max_hex_vert_normalized_Jacobian_determinants
 // **************************************************
 
 // Compute min/max hexahedra shape metric based on Jacobian matrices.
-// - Version with input argument mesh_data.
 void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_shape
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
@@ -1230,6 +1264,24 @@ void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_shape
      0, 0, min_Jacobian_shape, max_Jacobian_shape,
      poly_with_min_Jacobian_shape, poly_with_max_Jacobian_shape,
      compute_min_max_hexahedron_Jacobian_shape);
+}
+
+
+// Compute min/max hexahedra shape metric based on Jacobian matrices.
+// - Version which does not return hexahedra containing min/max shape.
+void IJKMESHINFO::compute_min_max_hexahedra_Jacobian_shape
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+ const bool flag_internal,
+ COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape)
+{
+  int poly_with_min_value;
+  int poly_with_max_value;
+
+  compute_min_max_hexahedra_Jacobian_shape
+    (mesh_data, polymesh, vertex_coord, flag_internal,
+     min_Jacobian_shape, max_Jacobian_shape,
+     poly_with_min_value, poly_with_max_value);
 }
 
 

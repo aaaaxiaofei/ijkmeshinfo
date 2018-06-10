@@ -1750,8 +1750,8 @@ void IJKMESHINFO::usage_msg()
        << endl;
   cerr << "  [-out_values] [-out_min_jdet]"
        << endl;
-  cerr << "  [-plot_angles] [-plot_edge_lengths] [-plot_jacobian]"
-       << endl;
+  cerr << "  [-plot_angles] [-plot_edge_lengths]" << endl;
+  cerr << "  [-plot_jacobian] [-plot_jshape]" << endl;
   cerr << "  [-report_deep] [-for_each_type]" << endl;
   cerr << "  [-max_out <N>] [-terse] [-help]" << endl;
 }
@@ -1865,6 +1865,10 @@ void IJKMESHINFO::help_msg()
   cerr << "  -plot_jacobian:     Create gnuplot (.gplt) files of min and max"
        << endl
        << "                          hexahedra Jacobian determinants." 
+       << endl;
+  cerr << "  -plot_jshape:     Create gnuplot (.gplt) files of min and max"
+       << endl
+       << "                          hexahedra Jacobian shave values." 
        << endl;
   cerr << "  -report_deep:       Report only boundary facets at least distance 1"
        << endl

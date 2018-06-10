@@ -426,13 +426,24 @@ namespace IJK {
 
     // get functions
 
+    /// Return true if option "optA" is defined.
     bool IsOptionDefined(const OPTION_TYPE optA) const;
+
+    /// Return true if option group "group" is defined.
     bool IsGroupDefined(const OPTION_GROUP group) const;
+
+    /// Return location (index) of option in C++ vector list.
     std::size_t OptionListIndex(const OPTION_TYPE optA) const;
+
+    /// Return integer associated with option optA.
     std::size_t OptionNum(const OPTION_TYPE optA) const
     { return(std::size_t(optA)); }
+
+    /// Return integer associated with optA_group
     std::size_t OptionGroupNum(const OPTION_GROUP optA_group) const
     { return(std::size_t(optA_group)); }
+
+    /// Return reference to option optA.
     const OPTION_INFO & Option(const OPTION_TYPE optA) const;
 
     /// Get option.  Return false if option not found.
@@ -475,6 +486,8 @@ namespace IJK {
     { AddOption(optA, optA_name, optA_group, opt_str, 2,
                 arg_str, help_message); }
 
+    /// Add a synonym for option A, i.e., another string which invokes
+    ///   option A.
     void AddSynonym(const OPTION_TYPE optA,
                     const char * optA_str);
 
@@ -484,12 +497,12 @@ namespace IJK {
      const char * arg_str, 
      const char * arg_help_message);
 
-    // Usage message set functions.
+    /// Set usage message.
     void SetUsageMessage(const char * msg);
     void SetUsageMessage(const char * s0, const char * s1);
     void SetUsageMessage(const char * s0, const char * s1, const char * s2);
 
-    // Usage option set functions.
+    /// Add usage option.
     void AddUsageOption 
     (const OPTION_TYPE option, const OPTION_GROUP opt_group);
     void AddUsageOption

@@ -35,6 +35,9 @@
 
 namespace IJK {
 
+  // *****************************************************************
+  // PRINT LIST
+  // *****************************************************************
 
   /// Print values in list.  No parentheses.
   template <typename ETYPE, typename NTYPE>
@@ -82,6 +85,65 @@ namespace IJK {
     print_list(out, IJK::vector2pointer(list), list.size());
   }
 
+
+  // *****************************************************************
+  // PRINT LIST VALUES AS INTEGERS
+  // *****************************************************************
+
+  /// Print values in list as integers. (Cast to integers.)  No parentheses.
+  template <typename ETYPE, typename NTYPE>
+  void print_list_values_as_int
+  (std::ostream & out, const ETYPE * list, const NTYPE length,
+   const char separator)
+  {
+    for (NTYPE i = 0; i < length; i++) {
+      if (i > 0) { out << separator; };
+      out << int(list[i]);
+    }
+  }
+
+  /// Print list values as integers with left and right delimiters.
+  template <typename ETYPE, typename NTYPE>
+  void print_list_as_int
+  (std::ostream & out, const ETYPE * list, const NTYPE length,
+   const char separator,
+   const char left_delim, const char right_delim)
+  {
+    out << left_delim;
+    print_list_values_as_int(out, list, length, separator);
+    out << right_delim;
+  }
+
+  /// Print list values as integers enclosed in parentheses.
+  template <typename ETYPE, typename NTYPE>
+  void print_list_as_int
+  (std::ostream & out, const ETYPE * list, const NTYPE length,
+   const char separator)
+  {
+    print_list_as_int(out, list, length, separator, '(', ')');
+  }
+
+  /// Print list values as int separated by commas and enclosed in parentheses.
+  template <typename ETYPE, typename NTYPE>
+  void print_list_as_int
+  (std::ostream & out, const ETYPE * list, const NTYPE length)
+  {
+    print_list_as_int(out, list, length, ',');
+  }
+
+  /// Print list separated by commas and enclosed in parentheses.
+  /// C++ STL vector format for list[].
+  template <typename ETYPE>
+  void print_list_as_int(std::ostream & out, const std::vector<ETYPE> & list)
+  {
+    print_listas_int(out, IJK::vector2pointer(list), list.size());
+  }
+
+
+  // *****************************************************************
+  // PRINT LIST OF TUPLES
+  // *****************************************************************
+
   /// Print list of tuples.
   template <typename ETYPE, typename N0TYPE, typename N1TYPE>
   void print_list_of_tuples
@@ -112,6 +174,11 @@ namespace IJK {
     SIZE_TYPE num_tuples = list.size()/tuple_size;
     print_list_of_tuples(out, &(list[0]), tuple_size, num_tuples);
   }
+
+
+  // *****************************************************************
+  // PRINT 3D COORDINATES
+  // *****************************************************************
 
   /// Print 3 coordinates.
   template <typename CTYPE>
@@ -152,6 +219,11 @@ namespace IJK {
     out << s2;
   }
 
+
+  // *****************************************************************
+  // PRINT GRID COORDINATES
+  // *****************************************************************
+
   template <typename GTYPE, typename VTYPE>
   void print_grid_coord(std::ostream & out, const GTYPE & grid, const VTYPE iv)
   {
@@ -174,6 +246,11 @@ namespace IJK {
     out << s;
   }
 
+
+  // *****************************************************************
+  // PRINT GRID SIZE
+  // *****************************************************************
+
   template <typename GTYPE>
   void print_grid_size(std::ostream & out, const GTYPE & grid, const char * s)
   {
@@ -189,6 +266,11 @@ namespace IJK {
     }
     out << s; 
   }
+
+
+  // *****************************************************************
+  // PRINT POLYGON VERTICES
+  // *****************************************************************
 
   /// Print triangle vertices, preceded and followed by a string.
   template <typename VTYPE>
@@ -244,6 +326,10 @@ namespace IJK {
   }
 
 
+  // *****************************************************************
+  // PRINT TIME
+  // *****************************************************************
+
   inline void print_time(std::ostream & out, const char * s, 
                          const clock_t & t_start, const clock_t & t_end)
   {
@@ -252,6 +338,10 @@ namespace IJK {
     out << std::endl;
   }
 
+
+  // *****************************************************************
+  // PRINT PERCENTAGE
+  // *****************************************************************
 
   /// Convert (numerator/denominator) to percentage.
   /// @pre denominator is not zero.
