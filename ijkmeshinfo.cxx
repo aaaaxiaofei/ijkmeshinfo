@@ -2508,7 +2508,11 @@ void write_edge_length_table_gplt
 
 
 
- // Determine min (starting) value of Jacobian determinants
+// **************************************************
+// Write Jacobian Tables
+// **************************************************
+
+// Determine min (starting) value of Jacobian determinants
 //    in the Jacobian determinant table.
 void determine_min_table_Jacobian
 (const COORD_TYPE min_Jacobian, COORD_TYPE & min_table_Jacobian)
@@ -2855,7 +2859,55 @@ void write_normalized_jacobian_table_gplt
 }
 
 
+// **************************************************
+// Write Jacobian Shape Tables
+// **************************************************
+
+void write_min_jacobian_shape_table_gplt
+(const string & filename_prefix, 
+ const string & filename_suffix,
+ JACOBIAN_SHAPE_TABLE & jacobian_shape_table)
+{
+  jacobian_shape_table.HideAllExceptShapeColumn();
+  jacobian_shape_table.min_jshape_freq.Show();
+
+  write_table_gplt
+    (filename_prefix, "min_"+filename_suffix, jacobian_shape_table);
+}
+
+
+void write_max_jacobian_shape_table_gplt
+(const string & filename_prefix, 
+ const string & filename_suffix,
+ JACOBIAN_SHAPE_TABLE & jacobian_shape_table)
+{
+  jacobian_shape_table.HideAllExceptShapeColumn();
+  jacobian_shape_table.max_jshape_freq.Show();
+
+  write_table_gplt
+    (filename_prefix, "max_"+filename_suffix, jacobian_shape_table);
+}
+
+
 void write_jacobian_shape_table_gplt
+(const string & filename_prefix, 
+ const string & filename_suffix,
+ const bool flag_min_table, const bool flag_max_table,
+ JACOBIAN_SHAPE_TABLE & jacobian_shape_table)
+{
+  if (flag_min_table) {
+    write_min_jacobian_shape_table_gplt
+      (filename_prefix, filename_suffix, jacobian_shape_table);
+  }
+
+  if (flag_max_table) {
+    write_max_jacobian_shape_table_gplt
+      (filename_prefix, filename_suffix, jacobian_shape_table);
+  }
+}
+
+
+void write_jacobian_shape_poly_table_gplt
 (const MESH_DATA & mesh_data,
  const POLYMESH_TYPE & polymesh,
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
@@ -2866,34 +2918,55 @@ void write_jacobian_shape_table_gplt
   const COORD_TYPE min_table_value = 0;
   int num_rows;
 
-  if (flag_internal_vert) {
-    compute_min_max_hex_vert_Jacobian_shape
-      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
-       flag_internal_poly, flag_internal_vert,
-       min_Jacobian_shape, max_Jacobian_shape);
-  }
-  else {
-    compute_min_max_hexahedra_Jacobian_shape
-      (mesh_data, polymesh, vertex_coord, flag_internal_poly, 
-       min_Jacobian_shape, max_Jacobian_shape);
-  }
+  compute_min_max_hexahedra_Jacobian_shape
+    (mesh_data, polymesh, vertex_coord, flag_internal_poly, 
+     min_Jacobian_shape, max_Jacobian_shape);
 
   JACOBIAN_SHAPE_TABLE jacobian_shape_table;
   jacobian_shape_table.jshape.Include();
   jacobian_shape_table.jshape.SetAtIntervals(0, Jacobian_table_interval);
   std::string filename_suffix;
 
-  if (flag_internal_vert) {
-    compute_hex_vert_Jacobian_shape
-      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
-       flag_internal_poly, flag_internal_vert, 
-       min_table_value, Jacobian_table_interval, jacobian_shape_table);
-  }
-  else {
-    compute_hex_Jacobian_shape
-      (mesh_data, polymesh, vertex_coord, flag_internal_poly,
-       min_table_value, Jacobian_table_interval, jacobian_shape_table);
-  }
+  compute_hex_Jacobian_shape
+    (mesh_data, polymesh, vertex_coord, flag_internal_poly,
+     min_table_value, Jacobian_table_interval, jacobian_shape_table);
+
+  filename_suffix = ".gplt";
+  if (flag_internal_poly)
+    { filename_suffix = ".internalP" + filename_suffix; }
+  filename_suffix = "jshape_freq" + filename_suffix;
+
+  write_jacobian_shape_table_gplt
+    (output_filename_prefix, filename_suffix, 
+     flag_min_table, flag_max_table, jacobian_shape_table);
+}
+
+
+void write_jacobian_shape_vert_table_gplt
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
+ const std::string & output_filename_prefix,
+ const bool flag_min_table, const bool flag_max_table)
+{
+  COORD_TYPE min_Jacobian_shape, max_Jacobian_shape;
+  const COORD_TYPE min_table_value = 0;
+  int num_rows;
+
+  compute_min_max_hex_vert_Jacobian_shape
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     flag_internal_poly, flag_internal_vert,
+     min_Jacobian_shape, max_Jacobian_shape);
+
+  JACOBIAN_SHAPE_TABLE jacobian_shape_table;
+  jacobian_shape_table.jshape.Include();
+  jacobian_shape_table.jshape.SetAtIntervals(0, Jacobian_table_interval);
+  std::string filename_suffix;
+
+  compute_hex_vert_Jacobian_shape
+    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+     flag_internal_poly, flag_internal_vert, 
+     min_table_value, Jacobian_table_interval, jacobian_shape_table);
 
   filename_suffix = ".gplt";
   if (flag_internal_vert) {
@@ -2902,27 +2975,41 @@ void write_jacobian_shape_table_gplt
     else
       { filename_suffix = ".internalV" + filename_suffix; }
   }
-  else if (flag_internal_poly)
-    { filename_suffix = ".internalP" + filename_suffix; }
+  else 
+    { filename_suffix = ".V" + filename_suffix; }
   filename_suffix = "jshape_freq" + filename_suffix;
 
-  if (flag_min_table) {
-    jacobian_shape_table.HideAllExceptShapeColumn();
-    jacobian_shape_table.min_jshape_freq.Show();
+  write_jacobian_shape_table_gplt
+    (output_filename_prefix, filename_suffix, 
+     flag_min_table, flag_max_table, jacobian_shape_table);
+}
 
-    write_table_gplt
-      (output_filename_prefix, "min_"+filename_suffix, 
-       jacobian_shape_table);
+
+void write_jacobian_shape_table_gplt
+(const MESH_DATA & mesh_data,
+ const POLYMESH_TYPE & polymesh,
+ const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
+ const std::string & output_filename_prefix,
+ const bool flag_min_table, const bool flag_max_table)
+{
+  if (flag_internal_vert) {
+    write_jacobian_shape_vert_table_gplt
+      (mesh_data, polymesh, vertex_poly_incidence,
+       output_filename_prefix, flag_min_table, flag_max_table);
   }
+  else {
+    if (io_info.flag_pJacobian.IsSetAndTrue()) {
+      write_jacobian_shape_poly_table_gplt
+        (mesh_data, polymesh, vertex_poly_incidence,
+         output_filename_prefix, flag_min_table, flag_max_table);
+    }
 
-  if (flag_max_table) {
-    jacobian_shape_table.HideAllExceptShapeColumn();
-    jacobian_shape_table.max_jshape_freq.Show();
-
-    write_table_gplt
-      (output_filename_prefix, "max_"+filename_suffix, jacobian_shape_table);
+    if (io_info.flag_vJacobian.IsSetAndTrue()) {
+      write_jacobian_shape_vert_table_gplt
+        (mesh_data, polymesh, vertex_poly_incidence,
+         output_filename_prefix, flag_min_table, flag_max_table);
+    }
   }
-
 }
 
 
