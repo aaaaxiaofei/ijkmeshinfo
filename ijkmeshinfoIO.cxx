@@ -1746,9 +1746,10 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-facet_angle_le <A>] [-facet_angle_ge <A>]" << endl;
   cerr << "  [-list_dup] [-internal] [-internal_vert]" << endl;
   cerr << "  [-selfI]" << endl;
+  cerr << "  [-pJacobian] [-vJacobian]" << endl;
   cerr << "  [-out_values] [-out_min_angle] [-out_max_angle]"
        << endl;
-  cerr << "  [-out_values] [-out_min_jdet]"
+  cerr << "  [-out_values] [-out_min_jdet] [-out_max_jdet]"
        << endl;
   cerr << "  [-plot_angles] [-plot_edge_lengths]" << endl;
   cerr << "  [-plot_jacobian] [-plot_jshape]" << endl;
@@ -1835,6 +1836,10 @@ void IJKMESHINFO::help_msg()
        << endl;
   cerr << "  -internal_vert:     Report only min/max values at internal mesh vertices."
        << endl;
+  cerr << "  -pJacobian:         Compute Jacobian values for each polytopes."
+       << endl;
+  cerr << "  -vJacobian:         Compute Jacobian values at each vertex."
+       << endl;
   cerr << "  -out_values:        Output only values for -manifold option."
        << endl;
   cerr << "     Output number of non-manifold vertices, number of non-manifold vertices"
@@ -1854,7 +1859,7 @@ void IJKMESHINFO::help_msg()
        << "     determinant of vertices may be greater than the minimum"
        << endl
        << "     Jacobian determinant.)" << endl;
-  cerr << "  -out_min_jdet:      Output maximum Jacobian determinant." 
+  cerr << "  -out_max_jdet:      Output maximum Jacobian determinant." 
        << endl;
   cerr << "  -plot_angles:       Create gnuplot (.gplt) files of min and max"
        << endl

@@ -157,6 +157,40 @@ namespace IJKMESHINFO {
 
 
   // **************************************************
+  // Class EDGE_DATA
+  // **************************************************
+
+  class EDGE_DATA {
+
+  protected:
+    void Init();
+
+  public:
+
+    /// Endpoints
+    int endpoint[2];
+
+    /// True if edge is on surface/volume boundary.
+    bool on_boundary;
+
+  public:
+    EDGE_DATA() { Init(); }
+
+    /// Return true if edge is on surface boundary or
+    ///   incident on a volume boundary facet.
+    /// - Note: Both vertices of an edge could be on a volume boundary,
+    ///   but the edge could still be internal.
+    bool OnBoundary() const
+    { return(on_boundary); }
+
+    /// Return true if edge is on surface boundary or
+    ///   incident on a volume boundary facet.
+    bool IsInternal() const
+    { return(!OnBoundary()); }
+  };
+
+
+  // **************************************************
   // Class POLYMESH_TYPE
   // **************************************************
 

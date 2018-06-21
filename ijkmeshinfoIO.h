@@ -100,10 +100,10 @@ namespace IJKMESHINFO {
     bool flag_general_info;
 
     /// Compute Jacobian at vertices.
-    IJK::SET_VALUE<bool> flag_vJacobian;
+    IJK::BOOLEAN_SET_VALUE flag_vJacobian;
 
     /// Compute Jacobian at polytopes including poly center.
-    IJK::SET_VALUE<bool> flag_pJacobian;
+    IJK::BOOLEAN_SET_VALUE flag_pJacobian;
 
   public:
     /// Constructor

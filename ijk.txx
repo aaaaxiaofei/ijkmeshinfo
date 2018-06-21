@@ -304,6 +304,17 @@ namespace IJK {
   };
 
 
+  class BOOLEAN_SET_VALUE:public SET_VALUE<bool> {
+
+  public:
+    BOOLEAN_SET_VALUE() {};
+    BOOLEAN_SET_VALUE(const bool value):SET_VALUE<bool>(value) {};
+
+    bool IsSetAndTrue() const
+    { return((this->IsSet() && Value())); }
+  };
+
+
   // **************************************************
   // TEMPLATE CLASS CONSTANT
   // **************************************************
