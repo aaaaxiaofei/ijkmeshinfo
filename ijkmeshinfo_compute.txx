@@ -34,14 +34,13 @@ namespace IJKMESHINFO {
   // **************************************************
 
   /// Compute the minimum and maximum values for each polytope in polymesh.
-  template <typename MDATA_TYPE,
-            typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE0, typename MAXVAL_TYPE0, 
             typename MINVAL_TYPE1, typename MAXVAL_TYPE1, 
             typename PTYPE0, typename PTYPE1,
             typename VTYPE, typename NTYPE0, typename NTYPE1>
   void compute_min_max_plist_values
-  (const MDATA_TYPE & mesh_data, const MTYPE & polymesh,
+  (const MDATA_TYPE & mesh_data,
    const COORD_TYPE * vertex_coord, const bool flag_internal,
    const MINVAL_TYPE0 min_init, const MAXVAL_TYPE0 max_init,
    MINVAL_TYPE1 & min_value, MAXVAL_TYPE1 & max_value,
@@ -61,12 +60,12 @@ namespace IJKMESHINFO {
     }
 
     bool is_set(false);
-    for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-      if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+      if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
       if (flag_internal) {
-        if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
@@ -74,7 +73,8 @@ namespace IJKMESHINFO {
       MAXVAL_TYPE1 max_value_i;
       NTYPE1 num_values;
       compute_min_max_poly_values
-        (mesh_data, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+        (mesh_data, mesh_data.VertexList(ipoly), 
+         mesh_data.NumPolyVert(ipoly),
          vertex_coord, min_value_i, max_value_i, num_values);
 
       if (num_values > 0) {
@@ -97,15 +97,14 @@ namespace IJKMESHINFO {
 
   /// Compute the minimum and maximum values for each polytope in polymesh.
   /// - Return min/max values data.
-  template <typename MDATA_TYPE,
-            typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE0, typename MAXVAL_TYPE0, 
             typename MINVAL_TYPE1, typename MAXVAL_TYPE1, 
             typename PTYPE0, typename PTYPE1,
             typename MINVAL_DATA_TYPE, typename MAXVAL_DATA_TYPE,
             typename VTYPE, typename NTYPE0, typename NTYPE1>
   void compute_min_max_plist_values_data
-  (const MDATA_TYPE & mesh_data, const MTYPE & polymesh,
+  (const MDATA_TYPE & mesh_data,
    const COORD_TYPE * vertex_coord, const bool flag_internal,
    const MINVAL_TYPE0 min_init, const MAXVAL_TYPE0 max_init,
    MINVAL_TYPE1 & min_value, MAXVAL_TYPE1 & max_value,
@@ -128,12 +127,12 @@ namespace IJKMESHINFO {
     }
 
     bool is_set(false);
-    for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-      if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+      if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
       if (flag_internal) {
-        if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
@@ -143,7 +142,8 @@ namespace IJKMESHINFO {
       MAXVAL_DATA_TYPE max_value_data_i;
       NTYPE1 num_values;
       compute_min_max_poly_values
-        (mesh_data, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+        (mesh_data, mesh_data.VertexList(ipoly), 
+         mesh_data.NumPolyVert(ipoly),
          vertex_coord, min_value_i, max_value_i, 
          min_value_data_i, max_value_data_i, num_values);
 
@@ -169,14 +169,13 @@ namespace IJKMESHINFO {
 
   /// Compute the minimum and maximum values for each polytope in polymesh
   ///   whose number of vertices equals num_poly_vert.
-  template <typename MDATA_TYPE,
-            typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE0, typename MAXVAL_TYPE0, 
             typename MINVAL_TYPE1, typename MAXVAL_TYPE1, 
             typename PTYPE0, typename PTYPE1,
             typename VTYPE, typename NTYPE0, typename NTYPE1, typename NTYPE2>
   void compute_min_max_plist_values_select_poly_by_numv
-  (const MDATA_TYPE & mesh_data, const MTYPE & polymesh,
+  (const MDATA_TYPE & mesh_data,
    const COORD_TYPE * vertex_coord, const bool flag_internal,
    const MINVAL_TYPE0 min_init, const MAXVAL_TYPE0 max_init,
    const NTYPE2 num_poly_vert,
@@ -198,14 +197,14 @@ namespace IJKMESHINFO {
     }
 
     bool is_set(false);
-    for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-      if (polymesh.NumPolyVert(ipoly) != num_poly_vert) { continue; }
+      if (mesh_data.NumPolyVert(ipoly) != num_poly_vert) { continue; }
 
-      if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+      if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
       if (flag_internal) {
-        if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
@@ -213,7 +212,8 @@ namespace IJKMESHINFO {
       MAXVAL_TYPE1 max_value_i;
       NTYPE1 num_values;
       compute_min_max_poly_values
-        (mesh_data, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+        (mesh_data, mesh_data.VertexList(ipoly), 
+         mesh_data.NumPolyVert(ipoly),
          vertex_coord, min_value_i, max_value_i, num_values);
 
       if (num_values > 0) {
@@ -238,8 +238,9 @@ namespace IJKMESHINFO {
   //! @name Compute values for each vertex.
   // **************************************************
 
+
   /// Compute the minimum and maximum values for each vertex in polymesh.
-  template <typename MDATA_TYPE, typename MTYPE,
+  template <typename MDATA_TYPE,
             typename VP_INCIDENCE_TYPE, typename CTYPE,
             typename MINVAL_TYPE0, typename MAXVAL_TYPE0, 
             typename MINVAL_TYPE1, typename MAXVAL_TYPE1, 
@@ -249,7 +250,6 @@ namespace IJKMESHINFO {
             typename NTYPE>
   void compute_min_max_vlist_values
   (const MDATA_TYPE & mesh_data, 
-   const MTYPE & polymesh,
    const VP_INCIDENCE_TYPE & vertex_poly_incidence,
    const COORD_TYPE * vertex_coord, 
    const bool flag_internal_poly,
@@ -261,9 +261,8 @@ namespace IJKMESHINFO {
    VTYPE0 & vertex_with_min_value, 
    VTYPE1 & vertex_with_max_value,
    void compute_min_max_vertex_values
-   (const MDATA_TYPE &, const MTYPE & polymesh,
-    const VP_INCIDENCE_TYPE &, const CTYPE *, const VTYPE2, 
-    const bool, const bool,
+   (const MDATA_TYPE &, const VP_INCIDENCE_TYPE &, 
+    const CTYPE *, const VTYPE2, const bool, const bool,
     MINVAL_TYPE1 &, MAXVAL_TYPE1 &, PTYPE2 &, PTYPE3 &, NTYPE &))
   {
     PTYPE2 poly_min;
@@ -286,7 +285,7 @@ namespace IJKMESHINFO {
       MAXVAL_TYPE1 max_value_i;
       NTYPE num_values;
       compute_min_max_vertex_values
-        (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+        (mesh_data, vertex_poly_incidence, vertex_coord, 
          iv, flag_internal_poly, flag_internal_vert,
          min_value_i, max_value_i, poly_min, poly_max, num_values);
 

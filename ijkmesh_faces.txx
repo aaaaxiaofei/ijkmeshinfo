@@ -25,7 +25,9 @@
 #define _IJKMESH_FACES_
 
 #include "ijk.txx"
+#include "ijkhash.txx"
 #include "ijklist.txx"
+#include "ijkmesh.txx"
 #include "ijkmesh_datastruct.txx"
 
 #include <vector>
@@ -1125,6 +1127,88 @@ namespace IJK {
     }
 
   }
+
+  // **************************************************
+  // EDGE HASH TABLE
+  // **************************************************
+
+  template <typename VTYPE, typename EDGE_INDEX_TYPE>
+  class UNORIENTED_EDGE_HASH_TABLE:
+    public unordered_map_key_pair<VTYPE,VTYPE,EDGE_INDEX_TYPE> {
+
+  protected:
+
+    typedef unordered_map_key_pair<VTYPE,VTYPE,EDGE_INDEX_TYPE> 
+    BASE_CLASS;
+
+  public:
+    typedef typename BASE_CLASS::iterator iterator;
+    typedef typename BASE_CLASS::const_iterator const_iterator;
+
+    // Undefine insert, find, findData;
+    std::pair<const_iterator,bool> 
+    insert (const VTYPE iv0, const VTYPE iv1, const EDGE_INDEX_TYPE ie);
+    iterator find(const VTYPE iv0, const VTYPE iv1);
+    const_iterator find(const VTYPE iv0, const VTYPE iv1) const;
+
+
+  public:
+    UNORIENTED_EDGE_HASH_TABLE(){};
+
+    std::pair<const_iterator,bool>
+    Insert(const VTYPE iv0, const VTYPE iv1, const EDGE_INDEX_TYPE ie)
+    {
+      if (iv0 <= iv1) { return(BASE_CLASS::insert(iv0, iv1, ie)); }
+      else { return(BASE_CLASS::insert(iv1, iv0, ie)); }
+    }
+
+    iterator Find(const VTYPE iv0, const VTYPE iv1)
+    {
+      if (iv0 <= iv1) { return(BASE_CLASS::find(iv0, iv1)); }
+      else { return(BASE_CLASS::find(iv1, iv0)); };
+    }
+
+    const_iterator Find(const VTYPE iv0, const VTYPE iv1) const
+    {
+      if (iv0 <= iv1) { return(BASE_CLASS::find(iv0, iv1)); }
+      else { return(BASE_CLASS::find(iv1, iv0)); };
+    }
+
+    /// Return true if hash table contains edge (iv0,iv1).
+    /// @param[out] it Iterator pointing to hash table element
+    ///   or to end of hash table.
+    bool Contains(const VTYPE iv0, const VTYPE iv1, 
+                  const_iterator & it) const
+    {
+      it = Find(iv0,iv1);
+      return(!(it == this->end())); 
+    }
+
+    /// Return true if hash table contains edge (iv0,iv1).
+    /// - Version which does not return iterator.
+    bool Contains(const VTYPE iv0, const VTYPE iv1) const
+    {
+      const_iterator it;
+      return(Contains(iv0,iv1,it));
+    }
+
+    /// Find edge index of edge (iv0,iv1).
+    /// Return false if edge (iv0,iv1) is not in the hash table.
+    bool FindEdgeIndex(const VTYPE iv0, const VTYPE iv1,
+                       EDGE_INDEX_TYPE & ie) const
+    {
+      const_iterator it = Find(iv0,iv1);
+      if (it == this->end()) {
+        ie = 0;
+        return(false);
+      }
+      else {
+        ie = it->second;
+        return(true);
+      }
+    }
+
+  };
 
 }
 

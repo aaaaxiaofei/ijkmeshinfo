@@ -72,12 +72,14 @@ void IJKMESHINFO::output_poly_info
 
 
 void IJKMESHINFO::output_degenerate_poly
-(const POLYMESH_TYPE & polymesh, const MESH_INFO & mesh_info)
+(const POLYMESH_TYPE & polymesh, 
+ const std::vector<POLY_DATA> & poly_data,
+ const MESH_INFO & mesh_info)
 {
   if (mesh_info.num_poly_with_duplicate_vertices > 0) {
     cout << "Degenerate poly:" << endl;
     for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-      if (polymesh.poly_data[ipoly].IsDegenerate()) {
+      if (poly_data[ipoly].IsDegenerate()) {
         cout << "  Poly " << ipoly << ": ";
         print_list(cout, polymesh.VertexList(ipoly), 
                    polymesh.NumPolyVert(ipoly));
@@ -89,12 +91,14 @@ void IJKMESHINFO::output_degenerate_poly
 
 
 void IJKMESHINFO::output_duplicate_poly
-(const POLYMESH_TYPE & polymesh, const MESH_INFO & mesh_info)
+(const POLYMESH_TYPE & polymesh, 
+ const std::vector<POLY_DATA> & poly_data,
+ const MESH_INFO & mesh_info)
 {
   if (mesh_info.num_duplicate_poly > 0) {
     cout << "Duplicate poly:" << endl;
     for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
-      if (polymesh.poly_data[ipoly].IsDuplicate()) {
+      if (poly_data[ipoly].IsDuplicate()) {
         cout << "  Poly " << ipoly << ": ";
         print_list(cout, polymesh.VertexList(ipoly), 
                    polymesh.NumPolyVert(ipoly));
@@ -165,7 +169,6 @@ void IJKMESHINFO::output_duplicate_vertices
 
 void IJKMESHINFO::output_min_max_polygon_angle
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh,
  const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info,
  const bool flag_internal, const int num_poly_edges)
@@ -182,8 +185,9 @@ void IJKMESHINFO::output_min_max_polygon_angle
 
   ANGLE_TYPE min_angle, max_angle;
   compute_min_max_polygon_angles
-    (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_edges, 
+    (mesh_data, vertex_coord, flag_internal, num_poly_edges, 
      min_angle, max_angle);
+
 
   get_polygon_name(num_poly_edges, polyname);
 
@@ -208,7 +212,8 @@ void IJKMESHINFO::output_min_max_polygon_angle
     else { polygon_descriptor = "polygons"; }
 
     compute_num_polygon_angles
-      (dimension, polymesh, vertex_coord, flag_internal, 
+      (dimension, mesh_data.polymesh, mesh_data.poly_data,
+       vertex_coord, flag_internal, 
        io_info.angle_le.Value(), io_info.angle_ge.Value(), num_le, num_ge);
 
     if (io_info.angle_le.IsSet() && io_info.flag_output_min_angle) {
@@ -227,7 +232,7 @@ void IJKMESHINFO::output_min_max_polygon_angle
 
 // Output polygons with minimum angle
 void IJKMESHINFO::output_polygons_with_min_angle
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+(const MESH_DATA & mesh_data, 
  const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
@@ -238,7 +243,7 @@ void IJKMESHINFO::output_polygons_with_min_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "polygons", "Poly", "angle", io_info.max_num_poly_out,
      compute_min_max_polygon_angles,
      compute_min_max_polygon_angles);
@@ -247,8 +252,7 @@ void IJKMESHINFO::output_polygons_with_min_angle
 
 // Output polygons with maximum angle
 void IJKMESHINFO::output_polygons_with_max_angle
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_polygons_with_max_angle");
@@ -258,7 +262,7 @@ void IJKMESHINFO::output_polygons_with_max_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "polygons", "Poly", "angle", io_info.max_num_poly_out,
      compute_min_max_polygon_angles,
      compute_min_max_polygon_angles);
@@ -267,20 +271,18 @@ void IJKMESHINFO::output_polygons_with_max_angle
 
 // Output polygons with minimum and maximum angles
 void IJKMESHINFO::output_polygons_with_min_max_angles
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   output_polygons_with_min_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
   output_polygons_with_max_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_polygons_with_small_angles
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -302,27 +304,28 @@ void IJKMESHINFO::output_polygons_with_small_angles
     cout << "Polygons with small angles: " << endl;
   }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].is_degenerate) { continue; }
+    if (mesh_data.poly_data[ipoly].is_degenerate) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     IJK::compute_cos_min_max_polygon_angles
-      (dimension, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+      (dimension, mesh_data.VertexList(ipoly), 
+       mesh_data.NumPolyVert(ipoly),
        vertex_coord, cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_min_i >= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
 
       cout << "  Poly " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Min angle: " << min_angle_i;
       cout << endl;
     }
@@ -343,8 +346,7 @@ void IJKMESHINFO::output_polygons_with_small_angles
 
 // Output polygons with large angles
 void IJKMESHINFO::output_polygons_with_large_angles
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -366,28 +368,28 @@ void IJKMESHINFO::output_polygons_with_large_angles
     cout << "Polygons with large angles: " << endl;
   }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+    if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     IJK::compute_cos_min_max_polygon_angles
-      (dimension, polymesh.VertexList(ipoly), 
-       polymesh.NumPolyVert(ipoly),
+      (dimension, mesh_data.VertexList(ipoly), 
+       mesh_data.NumPolyVert(ipoly),
        vertex_coord, cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_max_i <= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
 
       cout << "  Poly " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Max angle: " << max_angle_i;
       cout << endl;
     }
@@ -411,8 +413,7 @@ void IJKMESHINFO::output_polygons_with_large_angles
 // **************************************************
 
 void IJKMESHINFO::output_min_max_tetrahedra_facet_angle
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_min_max_tetrahedra_facet_angle");
@@ -422,7 +423,7 @@ void IJKMESHINFO::output_min_max_tetrahedra_facet_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord,
+    (cout, mesh_data, vertex_coord,
      io_info.flag_output_min_angle, io_info.flag_output_max_angle,
      flag_internal, "triangle angle", 
      compute_min_max_tetrahedra_facet_angles);
@@ -430,8 +431,7 @@ void IJKMESHINFO::output_min_max_tetrahedra_facet_angle
 
 
 void IJKMESHINFO::output_tetrahedra_facet_angle_count
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   const int dimension = mesh_data.dimension;
@@ -449,7 +449,8 @@ void IJKMESHINFO::output_tetrahedra_facet_angle_count
   int num_le, num_ge;
   if (io_info.facet_angle_le.IsSet() || io_info.facet_angle_ge.IsSet()) {
     compute_num_tetrahedra_facet_angles
-      (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal, 
+      (dimension, mesh_dimension, mesh_data.polymesh, mesh_data.poly_data,
+       vertex_coord, flag_internal, 
        io_info.facet_angle_le.Value(), io_info.facet_angle_ge.Value(), 
        num_le, num_ge);
 
@@ -471,8 +472,7 @@ void IJKMESHINFO::output_tetrahedra_facet_angle_count
 
 // Output tetrahedra with minimum facet angle
 void IJKMESHINFO::output_tetrahedra_with_min_facet_angle
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_facet_angle");
@@ -482,7 +482,7 @@ void IJKMESHINFO::output_tetrahedra_with_min_facet_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "triangle angle", io_info.max_num_poly_out,
      compute_min_max_tetrahedra_facet_angles,
      compute_min_max_tetrahedron_facet_angles);
@@ -491,8 +491,7 @@ void IJKMESHINFO::output_tetrahedra_with_min_facet_angle
 
 // Output tetrahedra with maximum facet angle
 void IJKMESHINFO::output_tetrahedra_with_max_facet_angle
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_facet_angle");
@@ -502,7 +501,7 @@ void IJKMESHINFO::output_tetrahedra_with_max_facet_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "triangle angle", io_info.max_num_poly_out,
      compute_min_max_tetrahedra_facet_angles,
      compute_min_max_tetrahedron_facet_angles);
@@ -511,20 +510,18 @@ void IJKMESHINFO::output_tetrahedra_with_max_facet_angle
 
 // Output tetrahedra with minimum and maximum facet angles
 void IJKMESHINFO::output_tetrahedra_with_min_max_facet_angles
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   output_tetrahedra_with_min_facet_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
   output_tetrahedra_with_max_facet_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_tetrahedra_with_small_facet_angles
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -546,27 +543,27 @@ void IJKMESHINFO::output_tetrahedra_with_small_facet_angles
     cout << "Tetrahedra with small facet angles: " << endl;
   }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].is_degenerate) { continue; }
+    if (mesh_data.poly_data[ipoly].is_degenerate) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     compute_cos_min_max_tetrahedron_facet_angles
-      (dimension, polymesh.VertexList(ipoly),
+      (dimension, mesh_data.VertexList(ipoly),
        vertex_coord, cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_min_i >= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
 
       cout << "  Tet " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Min facet angle: " << min_angle_i;
       cout << endl;
     }
@@ -588,8 +585,7 @@ void IJKMESHINFO::output_tetrahedra_with_small_facet_angles
 
 // Output tetrahedra with large facet angles.
 void IJKMESHINFO::output_tetrahedra_with_large_facet_angles
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -611,27 +607,27 @@ void IJKMESHINFO::output_tetrahedra_with_large_facet_angles
     cout << "Tetrahedra with large facet angles: " << endl;
   }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+    if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     compute_cos_min_max_tetrahedron_facet_angles
-      (dimension, polymesh.VertexList(ipoly), 
+      (dimension, mesh_data.VertexList(ipoly), 
        vertex_coord, cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_max_i <= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
 
       cout << "  Tet " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Max facet angle: " << max_angle_i;
       cout << endl;
     }
@@ -656,8 +652,7 @@ void IJKMESHINFO::output_tetrahedra_with_large_facet_angles
 // **************************************************
 
 void IJKMESHINFO::output_min_max_dihedral_angle
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_min_max_dihedral_angle");
@@ -667,15 +662,15 @@ void IJKMESHINFO::output_min_max_dihedral_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord,
+    (cout, mesh_data, vertex_coord,
      io_info.flag_output_min_angle, io_info.flag_output_max_angle,
-     flag_internal, "dihedral angle", compute_min_max_tetmesh_dihedral_angles);
+     flag_internal, "dihedral angle", 
+     compute_min_max_tetmesh_dihedral_angles);
 }
 
 
 void IJKMESHINFO::output_dihedral_angle_count
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   const int dimension = mesh_data.dimension;
@@ -693,7 +688,8 @@ void IJKMESHINFO::output_dihedral_angle_count
   int num_le, num_ge;
   if (io_info.angle_le.IsSet() || io_info.angle_ge.IsSet()) {
     compute_num_tetmesh_dihedral_angles
-      (dimension, mesh_dimension, polymesh, vertex_coord, flag_internal, 
+      (dimension, mesh_dimension, mesh_data.polymesh, mesh_data.poly_data,
+       vertex_coord, flag_internal, 
        io_info.angle_le.Value(), io_info.angle_ge.Value(), num_le, num_ge);
 
     if (io_info.angle_le.IsSet() && io_info.flag_output_min_angle) {
@@ -714,8 +710,7 @@ void IJKMESHINFO::output_dihedral_angle_count
 
 // Output tetrahedra with minimum dihedral angle.
 void IJKMESHINFO::output_tetrahedra_with_min_dihedral_angle
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_dihedral_angle");
@@ -725,7 +720,7 @@ void IJKMESHINFO::output_tetrahedra_with_min_dihedral_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
      compute_min_max_tetmesh_dihedral_angles,
      compute_min_max_tetrahedron_dihedral_angles);
@@ -734,8 +729,7 @@ void IJKMESHINFO::output_tetrahedra_with_min_dihedral_angle
 
 // Output tetrahedra with maximum dihedral angle.
 void IJKMESHINFO::output_tetrahedra_with_max_dihedral_angle
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_dihedral_angle");
@@ -745,7 +739,7 @@ void IJKMESHINFO::output_tetrahedra_with_max_dihedral_angle
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "dihedral angle", io_info.max_num_poly_out,
      compute_min_max_tetmesh_dihedral_angles,
      compute_min_max_tetrahedron_dihedral_angles);
@@ -753,22 +747,20 @@ void IJKMESHINFO::output_tetrahedra_with_max_dihedral_angle
 }
 
 
-// Output tetrahedra with minimum and maximum dihedral angles
+// Output tetrahedra with minimum and maximum dihedral angles.
 void IJKMESHINFO::output_tetrahedra_with_min_max_dihedral_angles
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   output_tetrahedra_with_min_dihedral_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
   output_tetrahedra_with_max_dihedral_angle
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
 }
 
 
 void IJKMESHINFO::output_tetrahedra_with_small_dihedral_angles
-(const MESH_DATA & mesh_data, 
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -788,27 +780,27 @@ void IJKMESHINFO::output_tetrahedra_with_small_dihedral_angles
   else 
     { cout << "Tetrahedra  with small dihedral angles: " << endl; }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].is_degenerate) { continue; }
+    if (mesh_data.poly_data[ipoly].is_degenerate) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     compute_cos_min_max_tetrahedron_dihedral_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
+      (dimension, mesh_data.VertexList(ipoly), vertex_coord,
        cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_min_i >= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE min_angle_i = std::acos(cos_min_i) * 180.0/M_PI;
 
       cout << "  Tet " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Min dihedral angle: " << min_angle_i;
       cout << endl;
     }
@@ -829,8 +821,7 @@ void IJKMESHINFO::output_tetrahedra_with_small_dihedral_angles
 
 // Output tetrahedra with large dihedral angles
 void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
-(const MESH_DATA & mesh_data, 
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const bool flag_internal, const ANGLE_TYPE angle_bound)
 {
   const int dimension = mesh_data.dimension;
@@ -850,27 +841,27 @@ void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
   else 
     { cout << "Tetrahedra with large angles: " << endl; }
 
-  for (int ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+  for (int ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
-    if (polymesh.poly_data[ipoly].IsDegenerate()) { continue; }
+    if (mesh_data.poly_data[ipoly].IsDegenerate()) { continue; }
 
     if (flag_internal) {
-      if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+      if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
         { continue; } 
     }
 
     compute_cos_min_max_tetrahedron_dihedral_angles
-      (dimension, polymesh.VertexList(ipoly), vertex_coord,
+      (dimension, mesh_data.VertexList(ipoly), vertex_coord,
        cos_min_i, cos_max_i, num_angle);
 
     if (num_angle > 0 && cos_max_i <= cos_angle_bound) {
       num_out++;
 
-      const int * pvert = polymesh.VertexList(ipoly);
+      const int * pvert = mesh_data.VertexList(ipoly);
       ANGLE_TYPE max_angle_i = std::acos(cos_max_i) * 180.0/M_PI;
 
       cout << "  Poly " << ipoly << ": ";
-      print_list(cout, pvert, polymesh.NumPolyVert(ipoly));
+      print_list(cout, pvert, mesh_data.NumPolyVert(ipoly));
       cout << "  Max angle: " << max_angle_i;
       cout << endl;
     }
@@ -892,9 +883,37 @@ void IJKMESHINFO::output_tetrahedra_with_large_dihedral_angles
 // OUTPUT EDGE LENGTH ROUTINES
 // **************************************************
 
+void IJKMESHINFO::output_min_max_edge_lengths_using_edge_list
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal_edge)
+{
+  COORD_TYPE min_edge_length, max_edge_length;
+  IJK::PROCEDURE_ERROR error("output_min_max_edge_lengths_using_edge_list");
+
+  if (flag_internal_edge) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  compute_min_max_edge_lengths
+    (mesh_data, vertex_coord, flag_internal_edge,
+     min_edge_length, max_edge_length);
+
+  if (io_info.flag_output_min_edge_length) {
+    cout << "Min ";
+    if (flag_internal_edge) { cout << "internal "; }
+    cout << "edge length: ";
+    cout << min_edge_length << endl; 
+  }
+
+  if (io_info.flag_output_max_edge_length) {
+    cout << "Max ";
+    if (flag_internal_edge) { cout << "internal "; }
+    cout << "edge length: ";
+    cout << max_edge_length << endl; 
+  }
+}
+
 void IJKMESHINFO::output_min_max_polygon_edge_lengths
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal,
  const int num_poly_vert)
 {
@@ -911,7 +930,7 @@ void IJKMESHINFO::output_min_max_polygon_edge_lengths
   COORD_TYPE min_edge_length, max_edge_length;
 
   compute_min_max_polygon_edge_lengths_select_poly_by_numv
-    (mesh_data, polymesh, vertex_coord, flag_internal, num_poly_vert, 
+    (mesh_data, vertex_coord, flag_internal, num_poly_vert, 
      min_edge_length, max_edge_length);
 
 
@@ -919,73 +938,66 @@ void IJKMESHINFO::output_min_max_polygon_edge_lengths
 
   if (io_info.flag_output_min_edge_length) {
     cout << "Min ";
-    if (flag_internal) { cout << "internal "; }
-    cout << polyname << " edge length: ";
+    cout << polyname << " edge length";
+    if (flag_internal) { cout << " (in internal poly)"; }
+    cout << ": ";
     cout << min_edge_length << endl; 
   }
 
   if (io_info.flag_output_max_edge_length) {
     cout << "Max ";
-    if (flag_internal) { cout << "internal "; }
-    cout << polyname << " edge length: ";
+    cout << polyname << " edge length";
+    if (flag_internal) { cout << " (in internal poly)"; }
+    cout << ": ";
     cout << max_edge_length << endl; 
   }
 }
 
 
 void IJKMESHINFO::output_min_max_tetrahedra_edge_lengths
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
-  const int dimension = mesh_data.dimension;
-  const int mesh_dimension = mesh_data.mesh_dimension;
   IJK::PROCEDURE_ERROR error("output_min_max_tetrahedra_edge_lengths");
 
   if (flag_internal) 
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord,
+  output_min_max_poly_valuesB
+    (cout, mesh_data, vertex_coord,
      io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
      flag_internal, "edge length", compute_min_max_tetrahedra_edge_lengths);
 }
 
 
 void IJKMESHINFO::output_min_max_simplices_edge_lengths
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
-  const int dimension = mesh_data.dimension;
-  const int mesh_dimension = mesh_data.mesh_dimension;
   IJK::PROCEDURE_ERROR error("output_min_max_simplices_edge_lengths");
 
   if (flag_internal) 
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord,
+  output_min_max_poly_valuesB
+    (cout, mesh_data, vertex_coord,
      io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
      flag_internal, "edge length", compute_min_max_simplices_edge_lengths);
 }
 
 
 void IJKMESHINFO::output_min_max_hexahedra_edge_lengths
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
-  const int dimension = mesh_data.dimension;
-  const int mesh_dimension = mesh_data.mesh_dimension;
   IJK::PROCEDURE_ERROR error("output_min_max_hexahedra_edge_lengths");
 
   if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
   if (flag_internal) 
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
-  output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord,
+  output_min_max_poly_valuesB
+    (cout, mesh_data, vertex_coord,
      io_info.flag_output_min_edge_length, io_info.flag_output_max_edge_length,
      flag_internal, "edge length", compute_min_max_hexahedra_edge_lengths);
 }
@@ -993,8 +1005,7 @@ void IJKMESHINFO::output_min_max_hexahedra_edge_lengths
 
 // Output polygons with min edge lengths.
 void IJKMESHINFO::output_polygons_with_min_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_polygons_with_min_edge_lengths");
@@ -1004,7 +1015,7 @@ void IJKMESHINFO::output_polygons_with_min_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "polgyons", "Poly", "edge length", io_info.max_num_poly_out,
      compute_min_max_polygon_edge_lengths,
      compute_min_max_polygon_edge_lengths);
@@ -1013,8 +1024,7 @@ void IJKMESHINFO::output_polygons_with_min_edge_lengths
 
 // Output polygons with max edge lengths.
 void IJKMESHINFO::output_polygons_with_max_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_polygons_with_max_edge_lengths");
@@ -1024,7 +1034,7 @@ void IJKMESHINFO::output_polygons_with_max_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "polgyons", "Poly", "edge length", io_info.max_num_poly_out,
      compute_min_max_polygon_edge_lengths,
      compute_min_max_polygon_edge_lengths);
@@ -1033,21 +1043,19 @@ void IJKMESHINFO::output_polygons_with_max_edge_lengths
 
 // Output polygons with min and maximum edge lengths.
 void IJKMESHINFO::output_polygons_with_min_max_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   output_polygons_with_min_edge_lengths
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
   output_polygons_with_max_edge_lengths
-    (mesh_data, polymesh, vertex_coord, io_info, flag_internal);
+    (mesh_data, vertex_coord, io_info, flag_internal);
 }
 
 
 // Output tetrahedra with min edge lengths.
 void IJKMESHINFO::output_tetrahedra_with_min_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord, 
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord, 
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_min_edge_lengths");
@@ -1057,17 +1065,17 @@ void IJKMESHINFO::output_tetrahedra_with_min_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "edge length", io_info.max_num_poly_out,
      compute_min_max_tetrahedra_edge_lengths,
      compute_min_max_tetrahedron_edge_lengths);
 }
 
 
+
 // Output tetrahedra with max edge lengths.
 void IJKMESHINFO::output_tetrahedra_with_max_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_tetrahedra_with_max_edge_lengths");
@@ -1077,7 +1085,7 @@ void IJKMESHINFO::output_tetrahedra_with_max_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "tetrahedra", "Tet", "edge length", io_info.max_num_poly_out,
      compute_min_max_tetrahedra_edge_lengths,
      compute_min_max_tetrahedron_edge_lengths);
@@ -1086,8 +1094,7 @@ void IJKMESHINFO::output_tetrahedra_with_max_edge_lengths
 
 // Output hexahedra with min edge lengths.
 void IJKMESHINFO::output_hexahedra_with_min_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_hexahedra_with_min_edge_lengths");
@@ -1097,7 +1104,7 @@ void IJKMESHINFO::output_hexahedra_with_min_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "hexahedra", "Hex", "edge length", io_info.max_num_poly_out,
      compute_min_max_hexahedra_edge_lengths,
      compute_min_max_hexahedron_edge_lengths);
@@ -1106,8 +1113,7 @@ void IJKMESHINFO::output_hexahedra_with_min_edge_lengths
 
 // Output hexahedra with max edge lengths.
 void IJKMESHINFO::output_hexahedra_with_max_edge_lengths
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error("output_hexahedra_with_max_edge_lengths");
@@ -1117,7 +1123,7 @@ void IJKMESHINFO::output_hexahedra_with_max_edge_lengths
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "hexahedra", "Hex", "edge length", io_info.max_num_poly_out,
      compute_min_max_hexahedra_edge_lengths,
      compute_min_max_hexahedron_edge_lengths);
@@ -1129,8 +1135,7 @@ void IJKMESHINFO::output_hexahedra_with_max_edge_lengths
 // **************************************************
 
 void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal,
  COORD_TYPE & min_Jacobian_determinant, 
  COORD_TYPE & max_Jacobian_determinant)
@@ -1143,7 +1148,7 @@ void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord, 
+    (cout, mesh_data, vertex_coord, 
      io_info.flag_output_min_Jacobian_determinant,
      io_info.flag_output_max_Jacobian_determinant,
      flag_internal, "Jacobian determinant", 
@@ -1152,22 +1157,8 @@ void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
 }
 
 
-void IJKMESHINFO::output_min_max_hexahedra_Jacobian_determinants
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
- const IO_INFO & io_info, const bool flag_internal)
-{
-  COORD_TYPE min_Jacobian_determinant, max_Jacobian_determinant;
-
-  output_min_max_hexahedra_Jacobian_determinants
-    (mesh_data, polymesh, vertex_coord, io_info,
-     flag_internal, min_Jacobian_determinant, max_Jacobian_determinant);
-}
-
-
 void IJKMESHINFO::output_min_max_hexahedra_normalized_Jacobian_determinants
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal,
  COORD_TYPE & min_Jacobian_determinant, 
  COORD_TYPE & max_Jacobian_determinant)
@@ -1181,7 +1172,7 @@ void IJKMESHINFO::output_min_max_hexahedra_normalized_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord, 
+    (cout, mesh_data, vertex_coord, 
      io_info.flag_output_min_normalized_Jacobian_determinant,
      io_info.flag_output_max_normalized_Jacobian_determinant,
      flag_internal, "normalized Jacobian determinant", 
@@ -1192,7 +1183,6 @@ void IJKMESHINFO::output_min_max_hexahedra_normalized_Jacobian_determinants
 
 void IJKMESHINFO::output_min_max_hex_vert_Jacobian_determinants
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, 
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1210,7 +1200,7 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_determinants
 
   if (flag_internal_vertex) {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_Jacobian_determinant,
        io_info.flag_output_max_Jacobian_determinant,
        flag_internal_poly, flag_internal_vertex,
@@ -1220,7 +1210,7 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_determinants
   }
   else {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_Jacobian_determinant,
        io_info.flag_output_max_Jacobian_determinant,
        flag_internal_poly, flag_internal_vertex,
@@ -1233,7 +1223,6 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_determinants
 
 void IJKMESHINFO::output_min_max_hex_vert_normalized_Jacobian_determinants
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, 
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1252,7 +1241,7 @@ void IJKMESHINFO::output_min_max_hex_vert_normalized_Jacobian_determinants
 
   if (flag_internal_vertex) {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_normalized_Jacobian_determinant,
        io_info.flag_output_max_normalized_Jacobian_determinant,
        flag_internal_poly, flag_internal_vertex,
@@ -1262,7 +1251,7 @@ void IJKMESHINFO::output_min_max_hex_vert_normalized_Jacobian_determinants
   }
   else {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_normalized_Jacobian_determinant,
        io_info.flag_output_max_normalized_Jacobian_determinant,
        flag_internal_poly, flag_internal_vertex,
@@ -1275,8 +1264,7 @@ void IJKMESHINFO::output_min_max_hex_vert_normalized_Jacobian_determinants
 
 // Output hexahedra with min Jacobian determinants.
 void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error
@@ -1288,7 +1276,7 @@ void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_min_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "hexahedra", "Hex", "Jacobian determinant", io_info.max_num_poly_out,
      compute_min_max_hexahedra_Jacobian_determinants,
      compute_min_max_hexahedron_Jacobian_determinants);
@@ -1297,8 +1285,7 @@ void IJKMESHINFO::output_hexahedra_with_min_Jacobian_determinants
 
 // Output hexahedra with max Jacobian determinants.
 void IJKMESHINFO::output_hexahedra_with_max_Jacobian_determinants
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
- const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal)
 {
   IJK::PROCEDURE_ERROR error
@@ -1310,17 +1297,60 @@ void IJKMESHINFO::output_hexahedra_with_max_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_polytopes_with_max_value
-    (cout, mesh_data, polymesh, vertex_coord, flag_internal,
+    (cout, mesh_data, vertex_coord, flag_internal,
      "hexahedra", "Hex", "Jacobian determinant", io_info.max_num_poly_out,
      compute_min_max_hexahedra_Jacobian_determinants,
      compute_min_max_hexahedron_Jacobian_determinants);
 }
 
 
+// Output hexahedra with min normalized Jacobian determinants.
+void IJKMESHINFO::output_hexahedra_with_min_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_min_normalized_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "normalized Jacobian determinant", 
+     io_info.max_num_poly_out,
+     compute_min_max_hexahedra_normalized_Jacobian_determinants,
+     compute_min_max_hexahedron_normalized_Jacobian_determinants);
+}
+
+
+// Output hexahedra with max normalized Jacobian determinants.
+void IJKMESHINFO::output_hexahedra_with_max_normalized_Jacobian_determinants
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_max_normalized_Jacobian_determinants");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "normalized Jacobian determinant", 
+     io_info.max_num_poly_out,
+     compute_min_max_hexahedra_normalized_Jacobian_determinants,
+     compute_min_max_hexahedron_normalized_Jacobian_determinants);
+}
+
+
 // Output hex mesh vertices with min Jacobian determinants.
 void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, 
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1340,7 +1370,7 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   compute_min_max_hex_vert_Jacobian_determinants
-    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+    (mesh_data, vertex_poly_incidence, vertex_coord, 
      flag_internal_poly, flag_internal_vertex,
      min_Jacobian_determinant, max_Jacobian_determinant,
      poly_with_min_val, poly_with_max_val, 
@@ -1360,7 +1390,7 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
 
     if (flag_internal_vertex) {
 
-      if (polymesh.vertex_data[iv].OnBoundary()) {
+      if (mesh_data.vertex_data[iv].OnBoundary()) {
         // Vertex iv is not internal.
         continue;
       }
@@ -1370,15 +1400,15 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
       const int jpoly = vertex_poly_incidence.IncidentPoly(iv, j);
       
       if (flag_internal_poly) {
-        if (polymesh.poly_data[jpoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[jpoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
       COORD_TYPE det;
       int kloc;
-      if (polymesh.DoesPolyContainVertex(jpoly,iv,kloc)) {
+      if (mesh_data.DoesPolyContainVertex(jpoly,iv,kloc)) {
         IJK::compute_Jacobian_determinant_at_hex_vertex_3D
-          (polymesh.VertexList(jpoly), mesh_data.orientation,
+          (mesh_data.VertexList(jpoly), mesh_data.orientation,
            vertex_coord, cube, kloc, det);
       }
       else {
@@ -1412,7 +1442,7 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_determinants
 // Output hex mesh vertices with min normalized Jacobian determinants.
 void IJKMESHINFO::
 output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
-(const MESH_DATA & mesh_data, const POLYMESH_TYPE & polymesh,
+(const MESH_DATA & mesh_data,
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1434,7 +1464,7 @@ output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   compute_min_max_hex_vert_normalized_Jacobian_determinants
-    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+    (mesh_data, vertex_poly_incidence, vertex_coord, 
      flag_internal_poly, flag_internal_vertex,
      min_Jacobian_determinant, max_Jacobian_determinant,
      poly_with_min_val, poly_with_max_val, 
@@ -1454,7 +1484,7 @@ output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
 
     if (flag_internal_vertex) {
 
-      if (polymesh.vertex_data[iv].OnBoundary()) {
+      if (mesh_data.vertex_data[iv].OnBoundary()) {
         // Vertex iv is not internal.
         continue;
       }
@@ -1464,15 +1494,15 @@ output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
       const int jpoly = vertex_poly_incidence.IncidentPoly(iv, j);
       
       if (flag_internal_poly) {
-        if (polymesh.poly_data[jpoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[jpoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
       COORD_TYPE det;
       int kloc;
-      if (polymesh.DoesPolyContainVertex(jpoly,iv,kloc)) {
+      if (mesh_data.DoesPolyContainVertex(jpoly,iv,kloc)) {
         IJK::compute_normalized_Jacobian_determinant_at_hex_vertex_3D
-          (polymesh.VertexList(jpoly), mesh_data.orientation,
+          (mesh_data.VertexList(jpoly), mesh_data.orientation,
            vertex_coord, cube, kloc, max_small_magnitude, 
            det, flag_zero);
       }
@@ -1509,8 +1539,7 @@ output_hex_mesh_vertices_with_min_normalized_Jacobian_determinants
 // **************************************************
 
 void IJKMESHINFO::output_min_max_hexahedra_Jacobian_shape
-(const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, const bool flag_internal,
  COORD_TYPE & min_Jacobian_shape,
  COORD_TYPE & max_Jacobian_shape)
@@ -1523,7 +1552,7 @@ void IJKMESHINFO::output_min_max_hexahedra_Jacobian_shape
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   output_min_max_poly_values
-    (cout, mesh_data, polymesh, vertex_coord, 
+    (cout, mesh_data, vertex_coord, 
      io_info.flag_output_min_Jacobian_shape,
      io_info.flag_output_max_Jacobian_shape,
      flag_internal, "Jacobian shape", 
@@ -1534,7 +1563,6 @@ void IJKMESHINFO::output_min_max_hexahedra_Jacobian_shape
 
 void IJKMESHINFO::output_min_max_hex_vert_Jacobian_shape
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, 
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1553,7 +1581,7 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_shape
 
   if (flag_internal_vertex) {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_Jacobian_shape,
        io_info.flag_output_max_Jacobian_shape,
        flag_internal_poly, flag_internal_vertex,
@@ -1563,7 +1591,7 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_shape
   }
   else {
     output_min_max_vertex_values
-      (cout, mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (cout, mesh_data, vertex_poly_incidence, vertex_coord, 
        io_info.flag_output_min_Jacobian_shape,
        io_info.flag_output_max_Jacobian_shape,
        flag_internal_poly, flag_internal_vertex,
@@ -1574,10 +1602,51 @@ void IJKMESHINFO::output_min_max_hex_vert_Jacobian_shape
 }
 
 
+// Output hexahedra with min Jacobian shape.
+void IJKMESHINFO::output_hexahedra_with_min_Jacobian_shape
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_min_Jacobian_shape");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_min_value
+    (cout, mesh_data, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "Jacobian shape", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_Jacobian_shape,
+     compute_min_max_hexahedron_Jacobian_shape);
+}
+
+
+// Output hexahedra with max Jacobian shape.
+void IJKMESHINFO::output_hexahedra_with_max_Jacobian_shape
+(const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+ const IO_INFO & io_info, const bool flag_internal)
+{
+  IJK::PROCEDURE_ERROR error
+    ("output_hexahedra_with_max_Jacobian_shape");
+
+  if (!check_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (!check_mesh_dimension<DIM3>(mesh_data, error)) { throw error; }
+  if (flag_internal) 
+    { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
+
+  output_polytopes_with_max_value
+    (cout, mesh_data, vertex_coord, flag_internal,
+     "hexahedra", "Hex", "Jacobian shape", io_info.max_num_poly_out,
+     compute_min_max_hexahedra_Jacobian_shape,
+     compute_min_max_hexahedron_Jacobian_shape);
+}
+
+
 // Output hex mesh vertices with min Jacobian shape metrics.
 void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_shape
 (const MESH_DATA & mesh_data,
- const POLYMESH_TYPE & polymesh, 
  const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
  const COORD_TYPE * vertex_coord,
  const IO_INFO & io_info, 
@@ -1598,7 +1667,7 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_shape
     { if (!check_boundary_facets(mesh_data, error)) { throw error; } }
 
   compute_min_max_hex_vert_Jacobian_shape
-    (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+    (mesh_data, vertex_poly_incidence, vertex_coord, 
      flag_internal_poly, flag_internal_vertex,
      min_Jacobian_shape, max_Jacobian_shape,
      poly_with_min_val, poly_with_max_val, 
@@ -1618,7 +1687,7 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_shape
 
     if (flag_internal_vertex) {
 
-      if (polymesh.vertex_data[iv].OnBoundary()) {
+      if (mesh_data.vertex_data[iv].OnBoundary()) {
         // Vertex iv is not internal.
         continue;
       }
@@ -1628,16 +1697,16 @@ void IJKMESHINFO::output_hex_mesh_vertices_with_min_Jacobian_shape
       const int jpoly = vertex_poly_incidence.IncidentPoly(iv, j);
       
       if (flag_internal_poly) {
-        if (polymesh.poly_data[jpoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[jpoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
       COORD_TYPE shape_metric;
       int kloc;
       bool flag_zero;
-      if (polymesh.DoesPolyContainVertex(jpoly,iv,kloc)) {
+      if (mesh_data.DoesPolyContainVertex(jpoly,iv,kloc)) {
         IJK::compute_Jacobian_shape_at_hex_vertex_3D
-          (polymesh.VertexList(jpoly), vertex_coord, cube, kloc, 
+          (mesh_data.VertexList(jpoly), vertex_coord, cube, kloc, 
            max_small_magnitude, shape_metric, flag_zero);
       }
       else {
@@ -1744,7 +1813,7 @@ void IJKMESHINFO::usage_msg()
   cerr << "  [-min_numv <N>] [-max_numv <N>]" << endl;
   cerr << "  [-angle_le <A>] [-angle_ge <A>]" << endl;
   cerr << "  [-facet_angle_le <A>] [-facet_angle_ge <A>]" << endl;
-  cerr << "  [-list_dup] [-internal] [-internal_vert]" << endl;
+  cerr << "  [-list_dup] [-internal] [-internal_vert] [-internal_edge]" << endl;
   cerr << "  [-selfI]" << endl;
   cerr << "  [-pJacobian] [-vJacobian]" << endl;
   cerr << "  [-out_values] [-out_min_angle] [-out_max_angle]"
@@ -1835,6 +1904,8 @@ void IJKMESHINFO::help_msg()
   cerr << "  -internal:          Report only min/max values for internal polytopes."
        << endl;
   cerr << "  -internal_vert:     Report only min/max values at internal mesh vertices."
+       << endl;
+  cerr << "  -internal_edge:     Report only min/max values at internal mesh edges."
        << endl;
   cerr << "  -pJacobian:         Compute Jacobian values for each polytopes."
        << endl;

@@ -29,7 +29,9 @@
 #include "ijk.txx"
 #include "ijkcube.txx"
 #include "ijkdatatable.txx"
+#include "ijkhash.txx"
 #include "ijkmesh_datastruct.txx"
+#include "ijkmesh_faces.txx"
 
 
 namespace IJKMESHINFO {
@@ -55,8 +57,13 @@ namespace IJKMESHINFO {
   typedef IJK::BOX<COORD_TYPE> BOUNDING_BOX;
   typedef int NUM_TYPE;
 
+  typedef IJK::POLYMESH<VERTEX_INDEX,int> POLYMESH_TYPE;
   typedef typename IJK::VERTEX_POLY_INCIDENCE_WITH_VLOC<int,int,int> 
   VERTEX_POLY_INCIDENCE_TYPE;
+  typedef typename IJK::VERTEX_ADJACENCY_LIST<int,int>
+  VERTEX_ADJACENCY_LIST_TYPE;
+  typedef typename IJK::UNORIENTED_EDGE_HASH_TABLE<int,int>
+  EDGE_HASH_TABLE_TYPE;
   typedef typename IJK::CUBE_FACE_INFO<int,int,int> CUBE_TYPE;
 
   typedef typename IJK::FACE_INFO_BASE<int,int> FACET_INFO;
@@ -191,25 +198,6 @@ namespace IJKMESHINFO {
 
 
   // **************************************************
-  // Class POLYMESH_TYPE
-  // **************************************************
-
-  class POLYMESH_TYPE:public IJK::POLYMESH_DATA<VERTEX_INDEX,int,POLY_DATA> {
-
-  public:
-
-    /// Vertex data.
-    std::vector<VERTEX_DATA> vertex_data;
-
-  public:
-
-    /// Return number of vertices.
-    int NumVertices() const
-    { return(vertex_data.size()); }
-  };
-
-
-  // **************************************************
   // Class MESH_INFO
   // **************************************************
 
@@ -249,6 +237,8 @@ namespace IJKMESHINFO {
     void Init();
 
   public:
+    typedef int NUMBER_TYPE;
+
     int dimension;
     int mesh_dimension;
     int num_vertices;
@@ -265,18 +255,63 @@ namespace IJKMESHINFO {
     /// True if hex sharing exactly two facets edges have been identified.
     bool are_hex_sharing_exactly_two_facet_edges_identified;
 
+    /// Polymesh.
+    POLYMESH_TYPE polymesh;
+
+    /// Vertex poly incidence.
+    VERTEX_POLY_INCIDENCE_TYPE vertex_poly_incidence;
+
+    /// Poly data.
+    std::vector<POLY_DATA> poly_data;
+
+    /// Vertex data.
+    std::vector<VERTEX_DATA> vertex_data;
+
+    /// Vertex adjacency list;
+    VERTEX_ADJACENCY_LIST_TYPE vertex_adjacency_list;
+
+    /// Edge data.
+    std::vector<EDGE_DATA> edge_data;
+
+    /// Edge hash table
+    EDGE_HASH_TABLE_TYPE edge_hash_table;
+
+
   public:
     MESH_DATA() { Init(); }
 
-    /* NOT YET INCORPORATED
-    COORD_TYPE * vertex_coord;
-    POLYMESH_TYPE polymesh;
-    MESH_INFO mesh_info;
-    */
+    /// Return number of polytopes.
+    int NumPoly() const
+    { return(polymesh.NumPoly()); }
+
+    /// Return number of vertices.
+    int NumVertices() const
+    { return(num_vertices); }
+
+    /// Return number of vertices of polytope i.
+    int NumPolyVert(const int ipoly) const
+    { return(polymesh.NumPolyVert(ipoly)); }
+
+    /// Return pointer to first vertex of polytope ipoly.
+    const VERTEX_INDEX * VertexList(const int ipoly) const
+    { return(polymesh.VertexList(ipoly)); }
+
+    /// Return true if polytope ipoly contains vertex iv.
+    bool DoesPolyContainVertex(const int ipoly, const VERTEX_INDEX iv) const
+    { return(polymesh.DoesPolyContainVertex(ipoly, iv)); }
+
+    /// Return true if polytope ipoly contains vertex iv.
+    /// - Version which returns location of vertex iv in list.
+    bool DoesPolyContainVertex
+    (const int ipoly, const VERTEX_INDEX iv, int & iloc) const
+    { return(polymesh.DoesPolyContainVertex(ipoly, iv, iloc)); }
+
+
+    /// Add edge (iv0,iv1) to edge_data and edge_hash_table.
+    /// - Return edge index.
+    /// @pre iv0 < iv1.
+    int AddEdge(const VERTEX_INDEX iv0, const VERTEX_INDEX iv1);
   };
-
-
-
 
 
   // **************************************************
@@ -405,6 +440,7 @@ namespace IJKMESHINFO {
   };
 
 
+  /* OBSOLETE
   class EDGE_LENGTH_TABLE:
     public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
 
@@ -438,6 +474,39 @@ namespace IJKMESHINFO {
        const NUM_TYPE width,
        const double normalization_factor) const;
 
+  };
+  */
+
+  class EDGE_LENGTH_TABLE:
+    public IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE> {
+
+  public:
+    static const NUM_TYPE NUM_ROWS = 30;
+
+    DATA_COLUMN<NUM_TYPE, COORD_TYPE> edge_length;
+    DATA_COLUMN<NUM_TYPE, NUM_TYPE> edge_length_freq;
+
+  public:
+    EDGE_LENGTH_TABLE():
+      IJKDATATABLE::DATA_TABLE_BASE<NUM_TYPE>(NUM_ROWS),
+      edge_length("edge-length", NUM_ROWS), 
+      edge_length_freq("edge-length", NUM_ROWS)
+        {};
+
+    // set routines
+    void HideAllExceptEdgeLengthColumn();
+    void ComputeSum();
+
+    // write routines
+    void WriteColumnLabels
+      (std::ostream & out, const std::string & separator) const;
+    void WriteColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width) const;
+    void WriteNormalizedColumnData
+      (std::ostream & out, const std::string & separator, 
+       const NUM_TYPE width,
+       const double normalization_factor) const;
   };
 
 

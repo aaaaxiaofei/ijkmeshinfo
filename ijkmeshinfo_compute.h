@@ -4,7 +4,7 @@
 
 /*
   IJK: Isosurface Jeneration Code
-  Copyright (C) 2017 Rephael Wenger
+  Copyright (C) 2017-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -46,8 +46,7 @@ namespace IJKMESHINFO {
   /// @param[out] poly_with_min_angle Index of polygon with min angle.
   /// @param[out] poly_with_max_angle Index of polygon with max angle.
   void compute_min_max_polygon_angles
-  (const MESH_DATA & mesh_data, 
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal, const int num_poly_edges,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle,
    int & poly_with_min_angle, int & poly_with_max_angle);
@@ -55,8 +54,7 @@ namespace IJKMESHINFO {
   /// Compute min/max polygon angles.
   /// - Version with num_poly_edges set to 0.
   void compute_min_max_polygon_angles
-  (const MESH_DATA & mesh_data, 
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle,
    int & poly_with_min_angle, int & poly_with_max_angle);
@@ -65,8 +63,7 @@ namespace IJKMESHINFO {
   /// - Version without return arguments poly_with_min_angle and
   ///   poly_with_max_angle.
   void compute_min_max_polygon_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal, const int num_poly_edges,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle);
 
@@ -75,8 +72,7 @@ namespace IJKMESHINFO {
   /// - Version without return arguments poly_with_min_angle and
   ///   poly_with_max_angle.
   void compute_min_max_polygon_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal, ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle);
 
   /// Compute min/max polygon angles.
@@ -100,6 +96,7 @@ namespace IJKMESHINFO {
   /// @pre mesh_dimension == 2.
   void compute_num_polygon_angles
   (const int dimension, const POLYMESH_TYPE & polymesh,
+   const std::vector<POLY_DATA> & poly_data,
    const COORD_TYPE * vertex_coord, const bool flag_internal, 
    const ANGLE_TYPE min_angle, const ANGLE_TYPE max_angle,
    int & num_le, int & num_ge);
@@ -126,8 +123,7 @@ namespace IJKMESHINFO {
   /// Compute min/max angle over all tetrahedra facets.
   /// @pre Tetrahedra are in 3D.
   void compute_min_max_tetrahedra_facet_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle,
    int & poly_with_min_angle, int & poly_with_max_angle);
@@ -136,8 +132,7 @@ namespace IJKMESHINFO {
   /// - Version which does not return poly_with_min_angle or
   ///   poly_with_max_angle.
   void compute_min_max_tetrahedra_facet_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle);
 
@@ -146,7 +141,8 @@ namespace IJKMESHINFO {
   /// @pre mesh_dimension == 3.
   void compute_num_tetrahedra_facet_angles
   (const int dimension, const int mesh_dimension, 
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const POLYMESH_TYPE & polymesh, const std::vector<POLY_DATA> & poly_data,
+   const COORD_TYPE * vertex_coord,
    const bool flag_internal, 
    const ANGLE_TYPE min_angle, const ANGLE_TYPE max_angle,
    int & num_le, int & num_ge);
@@ -163,8 +159,7 @@ namespace IJKMESHINFO {
   /// Compute min/max dihedral angles of tetrahedra.
   /// @pre polymesh is a mesh of tetrahedra.
   void compute_min_max_tetmesh_dihedral_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle, 
    int & poly_with_min_angle, int & poly_with_max_angle);
@@ -173,8 +168,7 @@ namespace IJKMESHINFO {
   /// - Version without return arguments poly_with_min_angle and
   ///   poly_with_max_angle.
   void compute_min_max_tetmesh_dihedral_angles
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    ANGLE_TYPE & min_angle, ANGLE_TYPE & max_angle);
 
@@ -183,7 +177,9 @@ namespace IJKMESHINFO {
   /// @pre mesh_dimension == 3.
   void compute_num_tetmesh_dihedral_angles
   (const int dimension, const int mesh_dimension, 
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+   const POLYMESH_TYPE & polymesh, 
+   const std::vector<POLY_DATA> & poly_data,
+   const COORD_TYPE * vertex_coord,
    const bool flag_internal, 
    const ANGLE_TYPE min_angle, const ANGLE_TYPE max_angle,
    int & num_le, int & num_ge);
@@ -207,18 +203,35 @@ namespace IJKMESHINFO {
 
   ///@{
 
+  /// Compute edge length of edge ie.
+  void compute_edge_length
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+   const int ie, COORD_TYPE & edge_length);
+
+  /// Compute min/max edge lengths of edges in mesh_data.edge_data.
+  void compute_min_max_edge_lengths
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+   const bool flag_internal_edge,
+   COORD_TYPE & min_edge_length, COORD_TYPE & max_edge_length,
+   int & edge_with_min_length, int & edge_with_max_length);
+
+  /// Compute min/max edge lengths of edges in mesh_data.edge_data.
+  /// - Version which does not return edges with min/max length.
+  void compute_min_max_edge_lengths
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
+   const bool flag_internal_edge,
+   COORD_TYPE & min_edge_length, COORD_TYPE & max_edge_length);
+
   /// Compute min/max edge lengths of polgyons.
   void compute_min_max_polygon_edge_lengths
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & poly_with_min_edge_length, int & poly_with_max_edge_length);
 
   /// Compute min/max edge lengths of polygons.
   void compute_min_max_polygon_edge_lengths_select_poly_by_numv
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal, const int num_poly_vert,
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & poly_with_min_edge_length, int & poly_with_max_edge_length);
@@ -226,8 +239,7 @@ namespace IJKMESHINFO {
   /// Compute min/max edge lengths of polygons.
   /// - Version which does not return polygons with min/max edge lengths.
   void compute_min_max_polygon_edge_lengths_select_poly_by_numv
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal, const int num_poly_vert,
    COORD_TYPE & min_length, COORD_TYPE & max_length);
 
@@ -251,8 +263,7 @@ namespace IJKMESHINFO {
 
   /// Compute min/max edge lengths of tetrahedra.
   void compute_min_max_tetrahedra_edge_lengths
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & poly_with_min_edge_length, int & poly_with_max_edge_length);
@@ -266,8 +277,7 @@ namespace IJKMESHINFO {
 
   /// Compute min/max edge lengths of a polymesh of simplices.
   void compute_min_max_simplices_edge_lengths
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & poly_with_min_edge_length, int & poly_with_max_edge_length);
@@ -282,8 +292,7 @@ namespace IJKMESHINFO {
 
   /// Compute min/max edge lengths of hexahedra.
   void compute_min_max_hexahedra_edge_lengths
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_length, COORD_TYPE & max_length,
    int & poly_with_min_edge_length, int & poly_with_max_edge_length);
@@ -308,10 +317,10 @@ namespace IJKMESHINFO {
   /// Compute min/max Jacobian matrix determinants of hexahedra.
   /// @pre dimension = 3. 
   void compute_min_max_hexahedra_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
-   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant,
    int & poly_with_min_Jacobian_determinant, 
    int & poly_with_max_Jacobian_determinant);
 
@@ -319,8 +328,7 @@ namespace IJKMESHINFO {
   /// - Version which does not return hexahedra containing min/max 
   ///   Jacobian determinants.
   void compute_min_max_hexahedra_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_Jacobian_determinant, 
    COORD_TYPE & max_Jacobian_determinant);
@@ -338,17 +346,14 @@ namespace IJKMESHINFO {
    int & num_Jacobian_determinants);
 
   /// Compute min/max Jacobian matrix determinants of hexahedra vertices.
-  /// - Version with input argument mesh_data.
   /// - Version which returns vertices with min/max Jacobian determinants.
   void compute_min_max_hex_vert_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly,
    const bool flag_internal_vert,
-   COORD_TYPE & min_Jacobian_determinant, 
-   COORD_TYPE & max_Jacobian_determinant,
+   COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
    int & poly_with_min_Jacobian_determinant, 
    int & poly_with_max_Jacobian_determinant,
    int & vert_with_min_Jacobian_determinant, 
@@ -358,7 +363,6 @@ namespace IJKMESHINFO {
   /// - Version which does not return vertices or polytopes with min/max values.
   void compute_min_max_hex_vert_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly, const bool flag_internal_vert,
@@ -367,9 +371,9 @@ namespace IJKMESHINFO {
 
   /// Compute min/max Jacobian matrix determinants of a vertex 
   ///   in a hexahedral mesh.
+  /// - Version with input vertex-poly incidence data structure.
   void compute_min_max_hex_vert_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh,
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const VERTEX_INDEX iv0,
@@ -391,10 +395,8 @@ namespace IJKMESHINFO {
   ///@{
 
   /// Compute min/max normalized Jacobian matrix determinants of hexahedra.
-  /// - Version with input argument mesh_data.
   void compute_min_max_hexahedra_normalized_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_Jacobian_determinant, COORD_TYPE & max_Jacobian_determinant,
    int & poly_with_min_Jacobian_determinant, 
@@ -404,8 +406,7 @@ namespace IJKMESHINFO {
   /// - Version which does not return hexahedra containing min/max 
   ///   normalized Jacobian determinants.
   void compute_min_max_hexahedra_normalized_Jacobian_determinants
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_Jacobian_determinant, 
    COORD_TYPE & max_Jacobian_determinant);
@@ -426,7 +427,6 @@ namespace IJKMESHINFO {
   /// - Version which returns vertices with min/max Jacobian determinants.
   void compute_min_max_hex_vert_normalized_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly,
@@ -443,7 +443,6 @@ namespace IJKMESHINFO {
   /// - Version which does not return vertices or polytopes with min/max values.
   void compute_min_max_hex_vert_normalized_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly, const bool flag_internal_vert,
@@ -455,7 +454,6 @@ namespace IJKMESHINFO {
   /// - Version with input vertex-poly incidence data structure.
   void compute_min_max_hex_vert_normalized_Jacobian_determinants
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh,
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const VERTEX_INDEX iv0,
@@ -480,27 +478,39 @@ namespace IJKMESHINFO {
    VERTEX_INDEX & vert_with_max_Jacobian_determinant,
    int & num_Jacobian_determinants);
 
+  /// Compute min/max normalized Jacobian matrix determinants of a vertex 
+  ///   in a hexahedral mesh.
+  /// - Version with input vertex-poly incidence data structure.
+  void compute_min_max_hex_vert_normalized_Jacobian_determinants
+  (const MESH_DATA & mesh_data,
+   const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
+   const COORD_TYPE * vertex_coord,
+   const VERTEX_INDEX iv0,
+   const bool flag_internal_poly,
+   const bool flag_internal_vert,
+   COORD_TYPE & min_Jacobian_determinant, 
+   COORD_TYPE & max_Jacobian_determinant,
+   int & poly_with_min_Jacobian_determinant, 
+   int & poly_with_max_Jacobian_determinant,
+   int & num_Jacobian_determinants);
+
 
   // ***********************************************************************
   //! @name Compute shape metrics based on Jacobian matrices.
   // ***********************************************************************
 
-
-  /// Compute min/max hexahedra shape metric based on Jacobian matrices.
+  // Compute min/max hexahedra shape metric based on Jacobian matrices.
   void compute_min_max_hexahedra_Jacobian_shape
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
-   COORD_TYPE & min_Jacobian_determinant, 
-   COORD_TYPE & max_Jacobian_determinant,
-   int & poly_with_min_Jacobian_determinant, 
-   int & poly_with_max_Jacobian_determinant);
+   COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape,
+   int & poly_with_min_Jacobian_shape, 
+   int & poly_with_max_Jacobian_shape);
 
   /// Compute min/max hexahedra shape metric based on Jacobian matrices.
   /// - Version which does not return hexahedra containing min/max shape.
   void compute_min_max_hexahedra_Jacobian_shape
-  (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, const COORD_TYPE * vertex_coord,
+  (const MESH_DATA & mesh_data, const COORD_TYPE * vertex_coord,
    const bool flag_internal,
    COORD_TYPE & min_Jacobian_shape, COORD_TYPE & max_Jacobian_shape);
 
@@ -531,7 +541,6 @@ namespace IJKMESHINFO {
   /// - Version which returns vertices with min/max shape metric.
   void compute_min_max_hex_vert_Jacobian_shape
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly,
@@ -547,7 +556,6 @@ namespace IJKMESHINFO {
   /// - Version which does not return vertices or polytopes with min/max values.
   void compute_min_max_hex_vert_Jacobian_shape
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const bool flag_internal_poly, const bool flag_internal_vert,
@@ -557,7 +565,6 @@ namespace IJKMESHINFO {
   /// - Version with input vertex-poly incidence data structure.
   void compute_min_max_hex_vert_Jacobian_shape
   (const MESH_DATA & mesh_data,
-   const POLYMESH_TYPE & polymesh,
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence, 
    const COORD_TYPE * vertex_coord,
    const VERTEX_INDEX iv0,
@@ -567,7 +574,6 @@ namespace IJKMESHINFO {
    int & poly_with_min_Jacobian_shape, 
    int & poly_with_max_Jacobian_shape,
    int & num_Jacobian_shapes);
-
 
   ///@}
 

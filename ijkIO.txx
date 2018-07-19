@@ -2,12 +2,12 @@
 /// IO templates for reading/writing meshes.
 /// - Input formats: Geomview .off.
 /// - Output formats: Geomview .off, OpenInventor .iv (3D), Fig .fig (2D)
-///   and Stanford .ply.
-/// - Version 0.1.4
+///   Stanford .ply, and Visualization Toolkit, .vtk.
+/// - Version 0.1.5
 
 /*
   IJK: Isosurface Jeneration Kode
-  Copyright (C) 2011-2017 Rephael Wenger
+  Copyright (C) 2011-2018 Rephael Wenger
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public License
@@ -73,6 +73,14 @@ namespace IJK {
     (std::ostream & out, 
      const NTYPE * num_poly_vert, const VTYPE * poly_vert,
      const ITYPE * first_poly_vert, const int num_poly);
+
+    template <typename NTYPE, typename VTYPE, typename ITYPE,
+              typename COLOR_TYPE>
+    void ijkoutPolytopeVerticesColor
+    (std::ostream & out, 
+     const NTYPE * num_poly_vert, const VTYPE * poly_vert,
+     const ITYPE * first_poly_vert, const int num_poly,
+     const COLOR_TYPE * front_color, const COLOR_TYPE * back_color);
 
     template <typename VTYPE> void ijkoutQuadVertices
     (std::ostream & out, const VTYPE * quad_vert, const int numq,
@@ -2606,6 +2614,34 @@ namespace IJK {
   }
 
 
+  /// Output scalar data.
+  template <typename DATA_TYPE, typename NTYPE> 
+  void ijkoutScalarValues
+  (std::ostream & out, const DATA_TYPE * data, const NTYPE num)
+  {
+    using std::endl;
+
+    for (NTYPE i = 0; i < num; i++) 
+      {  out << data[i] << endl;  }
+  }
+
+  /// Output vtk scalar cell data.
+  template <typename DATA_TYPE, typename NTYPE> 
+  void ijkoutScalarVTK
+  (std::ostream & out, const char * table_name, 
+   const char * data_type_string,
+   const DATA_TYPE * data, const NTYPE num_cells)
+  {
+    using std::endl;
+
+    out << "SCALARS " << table_name << " " 
+        << data_type_string << " 1" << endl;
+    out << "LOOKUP_TABLE default" << endl;
+
+    ijkoutScalarValues(out, data, num_cells);
+  }
+
+
   /// Output hexahedra.
   /// @param flag_reorder_hex_vertices If true, reorder hex vertices
   ///    in order expected by VTK.
@@ -2673,6 +2709,155 @@ namespace IJK {
     ijkoutHexahedraVTK
       (out, dataset_name, dim, vector2pointer(coord), numc,
        vector2pointer(hexahedra_vert), num_hex, flag_reorder_hex_vertices);
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1,
+            typename DATA_TYPE>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_table_name,
+   const char * data_type_name,
+   const DATA_TYPE * hex_data)
+  {
+    using namespace std;
+
+    ijkoutHexahedraVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices);
+
+    out << endl;
+
+    out << "CELL_DATA " << numh << endl;
+    ijkoutScalarVTK
+      (out, hex_table_name, data_type_name, hex_data, numh);
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// - Version where hex_data has type float.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_table_name,
+   const float * hex_data)
+  {
+    ijkoutHexahedraAndHexDataVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices, hex_table_name, "float", hex_data);
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// - Version where hex_data is a C++ vector of floats.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_table_name,
+   const std::vector<float> & hex_data)
+  {
+    ijkoutHexahedraAndHexDataVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices, hex_table_name, vector2pointer(hex_data));
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// - Version with two arrays of hex_data.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1,
+            typename DATA_A_TYPE, typename DATA_B_TYPE>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_tableA_name,
+   const char * data_typeA_name,
+   const DATA_A_TYPE * hex_dataA,
+   const char * hex_tableB_name,
+   const char * data_typeB_name,
+   const DATA_B_TYPE * hex_dataB)
+  {
+    using namespace std;
+
+    ijkoutHexahedraVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices);
+
+    out << "CELL_DATA " << numh << endl;
+    ijkoutScalarVTK
+      (out, hex_tableA_name, data_typeA_name, hex_dataA, numh);
+
+    out << endl;
+
+    ijkoutScalarVTK
+      (out, hex_tableB_name, data_typeB_name, hex_dataB, numh);
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// - Version with two arrays of hex_data.
+  /// - Version where both arrays have type float.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_tableA_name,
+   const float * hex_dataA,
+   const char * hex_tableB_name,
+   const float * hex_dataB)
+  {
+    ijkoutHexahedraAndHexDataVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices, 
+       hex_tableA_name, "float", hex_dataA, 
+       hex_tableB_name, "float", hex_dataB);
+  }
+
+
+  /// Output hexahedra and data for each hex.
+  /// - Version with two arrays of hex_data.
+  /// - Version where both arrays are C++ vectors of floats.
+  /// @param flag_reorder_hex_vertices If true, reorder hex vertices
+  ///    in order expected by VTK.
+  template <typename CTYPE, typename VTYPE, typename NTYPE0, typename NTYPE1>
+  void ijkoutHexahedraAndHexDataVTK
+  (std::ostream & out, const char * dataset_name,
+   const int dim, const CTYPE * coord, const NTYPE0 numv,
+   const VTYPE * hexahedra_vert, const NTYPE1 numh,
+   const bool flag_reorder_hex_vertices,
+   const char * hex_tableA_name,
+   const std::vector<float> & hex_dataA,
+   const char * hex_tableB_name,
+   const std::vector<float> & hex_dataB)
+  {
+    ijkoutHexahedraAndHexDataVTK
+      (out, dataset_name, dim, coord, numv, hexahedra_vert, numh,
+       flag_reorder_hex_vertices, 
+       hex_tableA_name, vector2pointer(hex_dataA),
+       hex_tableB_name, vector2pointer(hex_dataB));
   }
 
 

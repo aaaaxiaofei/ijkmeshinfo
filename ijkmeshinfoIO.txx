@@ -37,19 +37,18 @@ namespace IJKMESHINFO {
   // **************************************************
 
   /// Output minimum and maximum polytope values.
-  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE, typename MAXVAL_TYPE,
             typename PMIN_TYPE, typename PMAX_TYPE>
   void output_min_max_poly_values
   (std::ostream & out,
-   const MDATA_TYPE & mesh_data,
-   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord, 
    const bool flag_output_min,
    const bool flag_output_max,
    const bool flag_internal,
    const char * value_descriptor,
    void compute_min_max_values
-   (const MDATA_TYPE &, const MTYPE &, const CTYPE *, const bool,
+   (const MDATA_TYPE &, const CTYPE *, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &),
    MINVAL_TYPE & min_val, MAXVAL_TYPE & max_val)
   {
@@ -60,7 +59,7 @@ namespace IJKMESHINFO {
     using std::endl;
 
     compute_min_max_values
-      (mesh_data, polymesh, vertex_coord, flag_internal,
+      (mesh_data, vertex_coord, flag_internal,
        min_val, max_val, poly_with_min_val, poly_with_max_val);
 
     if (flag_internal) { internal_descriptor = "internal "; }
@@ -80,44 +79,44 @@ namespace IJKMESHINFO {
 
   /// Output minimum and maximum values.
   /// - Version which does not return min/max values.
-  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE, typename MAXVAL_TYPE,
             typename PMIN_TYPE, typename PMAX_TYPE>
   void output_min_max_poly_values
   (std::ostream & out,
-   const MDATA_TYPE & mesh_data,
-   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord, 
    const bool flag_output_min,
    const bool flag_output_max,
    const bool flag_internal,
    const char * value_descriptor,
    void compute_min_max_values
-   (const MDATA_TYPE &, const MTYPE &, const CTYPE *, const bool,
+   (const MDATA_TYPE &, const CTYPE *, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &))
   {
     MINVAL_TYPE min_value;
     MAXVAL_TYPE max_value;
     
     output_min_max_poly_values
-      (out, mesh_data, polymesh, vertex_coord,
+      (out, mesh_data, vertex_coord,
        flag_output_min, flag_output_max, flag_internal, value_descriptor,
        compute_min_max_values, min_value, max_value);
   }
 
 
-  /// Output minimum and maximum values.
-  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+  /// Output minimum and maximum polytope values.
+  /// - Version B which uses label "(in internal poly)".
+  template <typename MDATA_TYPE, typename CTYPE,
             typename MINVAL_TYPE, typename MAXVAL_TYPE,
             typename PMIN_TYPE, typename PMAX_TYPE>
-  void output_min_max_poly_values
+  void output_min_max_poly_valuesB
   (std::ostream & out,
-   const MDATA_TYPE & mesh_data,
-   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord, 
    const bool flag_output_min,
    const bool flag_output_max,
+   const bool flag_internal,
    const char * value_descriptor,
    void compute_min_max_values
-   (const MDATA_TYPE &, const MTYPE &, const CTYPE *,
+   (const MDATA_TYPE &, const CTYPE *, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &),
    MINVAL_TYPE & min_val, MAXVAL_TYPE & max_val)
   {
@@ -128,19 +127,50 @@ namespace IJKMESHINFO {
     using std::endl;
 
     compute_min_max_values
-      (mesh_data, polymesh, vertex_coord,
+      (mesh_data, vertex_coord, flag_internal,
        min_val, max_val, poly_with_min_val, poly_with_max_val);
 
+    if (flag_internal) { internal_descriptor = " (in internal poly)"; }
+    else { internal_descriptor = ""; }
+
     if (flag_output_min) {
-      out << "Min " << value_descriptor 
+      out << "Min " << value_descriptor << internal_descriptor
           << ": " << min_val << endl; 
     }
 
     if (flag_output_max) {
-      out << "Max " << value_descriptor
+      out << "Max " << value_descriptor << internal_descriptor 
           << ": " << max_val << endl; 
     }
   }
+
+
+  /// Output minimum and maximum values.
+  /// - Version B which uses label "(in internal poly)".
+  /// - Version which does not return min/max values.
+  template <typename MDATA_TYPE, typename CTYPE,
+            typename MINVAL_TYPE, typename MAXVAL_TYPE,
+            typename PMIN_TYPE, typename PMAX_TYPE>
+  void output_min_max_poly_valuesB
+  (std::ostream & out,
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord, 
+   const bool flag_output_min,
+   const bool flag_output_max,
+   const bool flag_internal,
+   const char * value_descriptor,
+   void compute_min_max_values
+   (const MDATA_TYPE &, const CTYPE *, const bool,
+    MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &))
+  {
+    MINVAL_TYPE min_value;
+    MAXVAL_TYPE max_value;
+    
+    output_min_max_poly_valuesB
+      (out, mesh_data, vertex_coord,
+       flag_output_min, flag_output_max, flag_internal, value_descriptor,
+       compute_min_max_values, min_value, max_value);
+  }
+
 
   /// Print message "(Additional polytopes not listed.)"
   template <typename NTYPE0, typename NTYPE1>
@@ -160,22 +190,21 @@ namespace IJKMESHINFO {
 
 
   /// Output polytopes with min value.
-  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename VTYPE, 
             typename NTYPE0, typename NTYPE1, typename NTYPE2,
             typename MINVAL_TYPE, typename MAXVAL_TYPE,
             typename PMIN_TYPE, typename PMAX_TYPE>
   void output_polytopes_with_min_value
   (std::ostream & out,
-   const MDATA_TYPE & mesh_data,
-   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord, 
    const bool flag_internal,
    const char * poly_descriptor,
    const char * poly_short_descriptor,
    const char * value_descriptor,
    const NTYPE0 max_num_poly_out,
    void compute_min_max_values
-   (const MDATA_TYPE &, const MTYPE &, const CTYPE *, const bool,
+   (const MDATA_TYPE &, const CTYPE *, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &),
    void compute_min_max_poly_values
    (const MDATA_TYPE &, const VTYPE *, const NTYPE1, const CTYPE *,
@@ -187,12 +216,12 @@ namespace IJKMESHINFO {
     PMAX_TYPE poly_with_max_val;
     std::string header_string;
 
-    typedef typename MTYPE::NUMBER_TYPE NUM_POLY_TYPE;
+    typedef typename MDATA_TYPE::NUMBER_TYPE NUM_POLY_TYPE;
 
     using std::endl;
 
     compute_min_max_values
-      (mesh_data, polymesh, vertex_coord, flag_internal, 
+      (mesh_data, vertex_coord, flag_internal, 
        min_val, max_val, poly_with_min_val, poly_with_max_val);
 
     if (flag_internal) 
@@ -207,10 +236,10 @@ namespace IJKMESHINFO {
         << " " << min_val << ":" << endl;
 
     NTYPE0 num_poly_out = 0;
-    for (NUM_POLY_TYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    for (NUM_POLY_TYPE ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
       if (flag_internal) {
-        if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
@@ -218,7 +247,8 @@ namespace IJKMESHINFO {
       MAXVAL_TYPE max_val_i;
       NTYPE1 num_val;
       compute_min_max_poly_values
-        (mesh_data, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+        (mesh_data, mesh_data.VertexList(ipoly), 
+         mesh_data.NumPolyVert(ipoly),
          vertex_coord, min_val_i, max_val_i, num_val);
 
       if (num_val > 0) {
@@ -228,7 +258,8 @@ namespace IJKMESHINFO {
           if (num_poly_out < max_num_poly_out) {
             out << "  " << poly_short_descriptor << " " << ipoly << ": ";
             IJK::print_list
-              (out, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly));
+              (out, mesh_data.VertexList(ipoly), 
+               mesh_data.NumPolyVert(ipoly));
             out << "  Min " << value_descriptor << ": " << min_val_i
                 << endl;
           }
@@ -244,22 +275,21 @@ namespace IJKMESHINFO {
 
 
   /// Output polytopes with max value.
-  template <typename MDATA_TYPE, typename MTYPE, typename CTYPE,
+  template <typename MDATA_TYPE, typename CTYPE,
             typename VTYPE, 
             typename NTYPE0, typename NTYPE1, typename NTYPE2,
             typename MINVAL_TYPE, typename MAXVAL_TYPE,
             typename PMIN_TYPE, typename PMAX_TYPE>
   void output_polytopes_with_max_value
   (std::ostream & out,
-   const MDATA_TYPE & mesh_data,
-   const MTYPE & polymesh, const CTYPE * vertex_coord, 
+   const MDATA_TYPE & mesh_data, const CTYPE * vertex_coord,
    const bool flag_internal,
    const char * poly_descriptor,
    const char * poly_short_descriptor,
    const char * value_descriptor,
    const NTYPE0 max_num_poly_out,
    void compute_min_max_values
-   (const MDATA_TYPE &, const MTYPE &, const CTYPE *, const bool,
+   (const MDATA_TYPE &, const CTYPE *, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &, PMIN_TYPE &, PMAX_TYPE &),
    void compute_min_max_poly_values
    (const MDATA_TYPE &, const VTYPE *, const NTYPE1, const CTYPE *,
@@ -271,12 +301,12 @@ namespace IJKMESHINFO {
     PMAX_TYPE poly_with_max_val;
     std::string header_string;
 
-    typedef typename MTYPE::NUMBER_TYPE NUM_POLY_TYPE;
+    typedef typename MDATA_TYPE::NUMBER_TYPE NUM_POLY_TYPE;
 
     using std::endl;
 
     compute_min_max_values
-      (mesh_data, polymesh, vertex_coord, flag_internal, 
+      (mesh_data, vertex_coord, flag_internal, 
        min_val, max_val, poly_with_min_val, poly_with_max_val);
 
     if (flag_internal) 
@@ -291,10 +321,10 @@ namespace IJKMESHINFO {
         << " " << max_val << ":" << endl;
 
     NTYPE0 num_poly_out = 0;
-    for (NUM_POLY_TYPE ipoly = 0; ipoly < polymesh.NumPoly(); ipoly++) {
+    for (NUM_POLY_TYPE ipoly = 0; ipoly < mesh_data.NumPoly(); ipoly++) {
 
       if (flag_internal) {
-        if (polymesh.poly_data[ipoly].ContainsBoundaryFacet()) 
+        if (mesh_data.poly_data[ipoly].ContainsBoundaryFacet()) 
           { continue; } 
       }
 
@@ -302,7 +332,8 @@ namespace IJKMESHINFO {
       MAXVAL_TYPE max_val_i;
       NTYPE1 num_val;
       compute_min_max_poly_values
-        (mesh_data, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly),
+        (mesh_data, mesh_data.VertexList(ipoly), 
+         mesh_data.NumPolyVert(ipoly),
          vertex_coord, min_val_i, max_val_i, num_val);
 
       if (num_val > 0) {
@@ -312,7 +343,8 @@ namespace IJKMESHINFO {
           if (num_poly_out < max_num_poly_out) {
             out << "  " << poly_short_descriptor << " " << ipoly << ": ";
             IJK::print_list
-              (out, polymesh.VertexList(ipoly), polymesh.NumPolyVert(ipoly));
+              (out, mesh_data.VertexList(ipoly), 
+               mesh_data.NumPolyVert(ipoly));
             out << "  Max " << value_descriptor << ": " << max_val_i
                 << endl;
           }
@@ -331,14 +363,13 @@ namespace IJKMESHINFO {
   // Output minimum and maximum vertex values
   // **************************************************
 
-  template <typename MDATA_TYPE, typename POLYMESH_TYPE, 
+  template <typename MDATA_TYPE,
             typename VERTEX_POLY_INCIDENCE_TYPE,
             typename CTYPE,
             typename MINVAL_TYPE, typename MAXVAL_TYPE>
   void output_min_max_vertex_values
   (std::ostream & out,
    const MDATA_TYPE & mesh_data,
-   const POLYMESH_TYPE & polymesh, 
    const VERTEX_POLY_INCIDENCE_TYPE & vertex_poly_incidence,
    const CTYPE * vertex_coord, 
    const bool flag_output_min,
@@ -347,8 +378,7 @@ namespace IJKMESHINFO {
    const bool flag_internal_vert,
    const char * value_descriptor,
    void compute_min_max_values
-   (const MDATA_TYPE &, const POLYMESH_TYPE &, 
-    const VERTEX_POLY_INCIDENCE_TYPE &,
+   (const MDATA_TYPE &, const VERTEX_POLY_INCIDENCE_TYPE &,
     const CTYPE *, const bool, const bool,
     MINVAL_TYPE &, MAXVAL_TYPE &),
    MINVAL_TYPE & min_val, MAXVAL_TYPE & max_val)
@@ -356,7 +386,7 @@ namespace IJKMESHINFO {
     using std::endl;
 
     compute_min_max_values
-      (mesh_data, polymesh, vertex_poly_incidence, vertex_coord, 
+      (mesh_data, vertex_poly_incidence, vertex_coord, 
        flag_internal_poly, flag_internal_vert, min_val, max_val);
 
     if (flag_output_min) {

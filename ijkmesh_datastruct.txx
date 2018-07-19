@@ -336,7 +336,8 @@ namespace IJK {
     /// @param poly_list[] List of polytopes containing vertices iv0 and iv1.
     template <typename VTYPE0, typename VTYPE1, typename PTYPE2>
     void GetPolyContaining
-    (const VTYPE0 iv0, const VTYPE1 iv1, std::vector<PTYPE2> & poly_list);
+    (const VTYPE0 iv0, const VTYPE1 iv1, 
+     std::vector<PTYPE2> & poly_list) const;
 
     /// Set vertex poly incidence from polymesh.
     template <typename VTYPE2, typename NTYPE2>
@@ -808,7 +809,7 @@ namespace IJK {
              (IncidentEdgeListIndex(iv, j), k)); }
 
     /// Return true if list of edges incident on vertex iv0 and 
-    ///  poly vertex_poly_incidence(iv,j) contains edge (iv0, iv1).
+    ///  poly vertex_poly_incidence(iv0,j) contains edge (iv0, iv1).
     template <typename VTYPE0, typename VTYPE1, typename NTYPE2>
     bool DoesIncidenceListContainEdge
     (const VTYPE0 iv0, const VTYPE1 iv1, const NTYPE2 j) const;
@@ -1084,7 +1085,7 @@ namespace IJK {
   template <typename VTYPE0, typename VTYPE1, typename PTYPE2>
   void VERTEX_POLY_INCIDENCE_BASE<ETYPE,NTYPE>::
   GetPolyContaining
-  (const VTYPE0 iv0, const VTYPE1 iv1, std::vector<PTYPE2> & poly_list)
+  (const VTYPE0 iv0, const VTYPE1 iv1, std::vector<PTYPE2> & poly_list) const
   {
     poly_list.clear();
     for (NTYPE j = 0; j < NumIncidentPoly(iv0);j++) {
@@ -1868,7 +1869,7 @@ namespace IJK {
   }
 
   // Return true if list of edges incident on vertex iv0 and 
-  //  poly vertex_poly_incidence(iv,j) contains edge (iv0, iv1).
+  //  poly vertex_poly_incidence(iv0,j) contains edge (iv0, iv1).
   template <typename ETYPE0, typename ETYPE1, typename NTYPE>
   template <typename VTYPE0, typename VTYPE1, typename NTYPE2>
   bool VERTEX_POLY_EDGE_INCIDENCE<ETYPE0,ETYPE1,NTYPE>::
